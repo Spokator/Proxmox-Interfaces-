@@ -133,7 +133,7 @@ if [[ "$INSTALL_NOW" == "1" ]]; then
   echo "[INFO] Syncing project into CT..."
   pct exec "$CT_ID" -- bash -lc "mkdir -p '${APP_DIR}'"
 
-  TMP_ARCHIVE="/tmp/chretieno-install-${CT_ID}.tgz"
+  TMP_ARCHIVE="/tmp/proxmox-interfaces-install-${CT_ID}.tgz"
   tar -czf "$TMP_ARCHIVE" -C "$SOURCE_DIR" package.json package-lock.json server.js public deploy .env .env.example 2>/dev/null || \
   tar -czf "$TMP_ARCHIVE" -C "$SOURCE_DIR" package.json package-lock.json server.js public deploy .env.example
 

@@ -45,7 +45,7 @@ Bootstrap options:
 All other arguments are forwarded to proxmox-easy-install.sh.
 
 Forwarded examples:
-  --ctid 190 --name proxmox-interfaces-a --ip 192.168.8.190/24 --gw 192.168.8.1 --dns 192.168.8.150
+  --ctid 190 --name proxmox-interfaces-a --ip 10.0.0.190/24 --gw 10.0.0.1 --dns 10.0.0.53
   --storage local-lvm --bridge vmbr0 --cores 2 --ram 1024 --disk 12
 EOF
 }
@@ -170,7 +170,7 @@ if [[ "$AUTO_YES" != "1" && -t 0 && -t 1 ]]; then
     ip_choice="$(prompt_default "Container IP (CIDR or dhcp)" "dhcp")"
     pass_args+=("--ip" "$ip_choice")
     if [[ "$ip_choice" != "dhcp" ]]; then
-      set_forwarded_default "--gw" "$(prompt_default "Gateway" "192.168.8.1")"
+      set_forwarded_default "--gw" "$(prompt_default "Gateway" "10.0.0.1")"
       set_forwarded_default "--dns" "$(prompt_default "DNS" "1.1.1.1")"
     fi
   fi

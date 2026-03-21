@@ -42,9 +42,9 @@ curl -fsSL https://YOUR-PUBLIC-BOOTSTRAP/proxmox-interfaces-bootstrap.sh | bash 
   --name proxmox-interfaces-a \
   --storage local-lvm \
   --bridge vmbr0 \
-  --ip 192.168.8.190/24 \
-  --gw 192.168.8.1 \
-  --dns 192.168.8.150 \
+  --ip 10.0.0.190/24 \
+  --gw 10.0.0.1 \
+  --dns 10.0.0.53 \
   --cores 2 \
   --ram 1024 \
   --disk 12

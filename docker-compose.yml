@@ -1,9 +1,9 @@
 version: "3.9"
 
 services:
-  chretieno:
+  proxmox-interfaces:
     build: .
-    container_name: chretieno-intranet
+    container_name: proxmox-interfaces
     restart: unless-stopped
     env_file:
       - .env

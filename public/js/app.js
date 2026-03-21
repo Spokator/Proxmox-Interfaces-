@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
-   Chretieno.lan — App.js
-   Logique de l'intranet : routing, état, API, vues, recherche
-   ═══════════════════════════════════════════════════════════════ */
+  Proxmox-Interfaces — App.js
+  Logic: routing, state, API, views, search
+  ═══════════════════════════════════════════════════════════════ */
 
 'use strict';
 
@@ -47,8 +47,8 @@ const State = {
 };
 
 const GUEST_POWER_TRANSITION_TTL_MS = 120000;
-const MIGRATION_PROFILE_KEY = 'chretieno_migration_profile_v1';
-const MIGRATION_AUTO_AUDIT_KEY = 'chretieno_migration_auto_audit_v1';
+const MIGRATION_PROFILE_KEY = 'proxmox_interfaces_migration_profile_v1';
+const MIGRATION_AUTO_AUDIT_KEY = 'proxmox_interfaces_migration_auto_audit_v1';
 const MIGRATION_AUTO_AUDIT_MS = 15000;
 
 // ─── Icônes par service ───────────────────────────────────────────
@@ -149,7 +149,7 @@ function sortContainersByVmid(containers) {
 // ─── Favoris ─────────────────────────────────────────────────────
 function loadFavorites() {
   try {
-    const raw = localStorage.getItem('chretieno_favorites');
+    const raw = localStorage.getItem('proxmox_interfaces_favorites');
     if (raw !== null) {
       JSON.parse(raw).forEach(id => State.favorites.add(id));
       State.favoritesSeeded = true;
@@ -171,7 +171,7 @@ function seedFavoritesFromDataIfNeeded() {
 }
 
 function saveFavorites() {
-  localStorage.setItem('chretieno_favorites', JSON.stringify([...State.favorites]));
+  localStorage.setItem('proxmox_interfaces_favorites', JSON.stringify([...State.favorites]));
 }
 function toggleFavorite(id) {
   if (State.favorites.has(id)) State.favorites.delete(id);
@@ -185,8 +185,8 @@ function isFavorite(id) {
 // ─── Cache local (évite unknown au reload) ───────────────────────
 function loadStatusCache() {
   try {
-    const raw = localStorage.getItem('chretieno_statuses');
-    const ts = parseInt(localStorage.getItem('chretieno_statuses_ts') || '0', 10);
+    const raw = localStorage.getItem('proxmox_interfaces_statuses');
+    const ts = parseInt(localStorage.getItem('proxmox_interfaces_statuses_ts') || '0', 10);
     if (!raw || !ts) return;
     // 10 minutes max
     if ((Date.now() - ts) > 10 * 60 * 1000) return;
@@ -199,14 +199,14 @@ function loadStatusCache() {
 
 function saveStatusCache() {
   try {
-    localStorage.setItem('chretieno_statuses', JSON.stringify(State.statuses || {}));
-    localStorage.setItem('chretieno_statuses_ts', String(Date.now()));
+    localStorage.setItem('proxmox_interfaces_statuses', JSON.stringify(State.statuses || {}));
+    localStorage.setItem('proxmox_interfaces_statuses_ts', String(Date.now()));
   } catch {}
 }
 
 function loadOverviewCache() {
   try {
-    const raw = localStorage.getItem('chretieno_overview');
+    const raw = localStorage.getItem('proxmox_interfaces_overview');
     if (!raw) return;
     const obj = JSON.parse(raw);
     const ts = obj?.ts || 0;
@@ -214,7 +214,7 @@ function loadOverviewCache() {
     // Historique conservé jusqu'à 8 jours
     if ((Date.now() - ts) > 8 * 24 * 60 * 60 * 1000) return;
 
-    const rangeMin = parseInt(localStorage.getItem('chretieno_overview_range_min') || '', 10);
+    const rangeMin = parseInt(localStorage.getItem('proxmox_interfaces_overview_range_min') || '', 10);
     if (rangeMin) State.overviewRangeMin = rangeMin;
 
     const hist = obj?.history;
@@ -242,7 +242,7 @@ function loadOverviewCache() {
 
 function saveOverviewCache(texts) {
   try {
-    localStorage.setItem('chretieno_overview', JSON.stringify({
+    localStorage.setItem('proxmox_interfaces_overview', JSON.stringify({
       ts: Date.now(),
       history: State.overviewHistory,
       storagePools: State.storagePoolsHistory,
@@ -1075,9 +1075,9 @@ function pushStoragePoolHistory(poolName, value) {
   pushHistory(State.storagePoolsHistory[poolName], value);
 }
 
-const STORAGE_MODAL_PREFS_KEY = 'chretieno_storage_modal_sections';
+const STORAGE_MODAL_PREFS_KEY = 'proxmox_interfaces_storage_modal_sections';
 let currentStorageModalPoolKey = null;
-const MONITORING_COLLAPSIBLE_PREFS_KEY = 'chretieno_monitoring_collapsible_sections';
+const MONITORING_COLLAPSIBLE_PREFS_KEY = 'proxmox_interfaces_monitoring_collapsible_sections';
 
 function loadMonitoringCollapsiblePrefs() {
   try {
@@ -1939,7 +1939,7 @@ function setupSparkTooltip(svgSel, valuesGetter) {
 
 function setOverviewRange(min) {
   State.overviewRangeMin = min;
-  try { localStorage.setItem('chretieno_overview_range_min', String(min)); } catch {}
+  try { localStorage.setItem('proxmox_interfaces_overview_range_min', String(min)); } catch {}
   qsa('#overview-range-panel .range-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.rangeMin, 10) === min));
   renderOverviewSparks();
   renderMonitoringStorage(State.storagePoolsLatest || []);
@@ -1999,7 +1999,7 @@ function renderTopology() {
         <i data-lucide="server"></i>
         <div>
           <div class="topo-host-name">Proxmox VE — Hôte principal</div>
-          <div class="topo-host-ip">192.168.8.100 — 192.168.8.0/24</div>
+          <div class="topo-host-ip">proxmox-host — 10.0.0.0/24</div>
         </div>
       </div>
       <div class="topo-line"></div>
@@ -3639,7 +3639,7 @@ document.head.appendChild(spinStyle);
 //  INIT
 // ═══════════════════════════════════════════════════════════════
 async function init() {
-  console.log('%cChretieno.lan Intranet v1.0.0', 'color:#6366f1;font-weight:bold;font-size:14px');
+  console.log('%cProxmox-Interfaces v1.0.0', 'color:#6366f1;font-weight:bold;font-size:14px');
 
   loadFavorites();
   loadStatusCache();

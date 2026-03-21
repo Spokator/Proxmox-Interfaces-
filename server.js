@@ -695,7 +695,7 @@ const PVE_WATCH_TASKS_ENABLED = String(process.env.PVE_WATCH_TASKS_ENABLED || 't
 const PVE_WATCH_SYSLOG_ENABLED = String(process.env.PVE_WATCH_SYSLOG_ENABLED || 'true').toLowerCase() !== 'false';
 const PVE_WATCH_INTERVAL_MS = Math.max(5_000, Math.min(120_000, parseInt(process.env.PVE_WATCH_INTERVAL_MS || '20000', 10)));
 
-const TECHNITIUM_BASE_URL = process.env.TECHNITIUM_BASE_URL || 'http://192.168.8.150:5380';
+const TECHNITIUM_BASE_URL = process.env.TECHNITIUM_BASE_URL || 'http://10.0.0.53:5380';
 const TECHNITIUM_TOKEN = process.env.TECHNITIUM_TOKEN || '';
 const TECHNITIUM_USER = process.env.TECHNITIUM_USER || '';
 const TECHNITIUM_PASS = process.env.TECHNITIUM_PASS || '';
@@ -1441,7 +1441,7 @@ async function getOverview() {
   // VRAM best-effort via Prometheus (si dispo)
   let vram = null;
   if (prom?.hostname) {
-    const instance = '192.168.8.165:9400';
+    const instance = '10.0.0.20:9400';
     const used = await promInstantQuery(prom.hostname, prom.port, `DCGM_FI_DEV_FB_USED{instance="${instance}"}`);
     let total = await promInstantQuery(prom.hostname, prom.port, `DCGM_FI_DEV_FB_TOTAL{instance="${instance}"}`);
     const free = await promInstantQuery(prom.hostname, prom.port, `DCGM_FI_DEV_FB_FREE{instance="${instance}"}`);
@@ -1572,7 +1572,7 @@ async function getNeighborMap() {
     stdout = '';
   }
 
-  // Exemple ligne: "192.168.8.165 dev eth0 lladdr aa:bb:cc:dd:ee:ff REACHABLE"
+  // Example line: "10.0.0.20 dev eth0 lladdr aa:bb:cc:dd:ee:ff REACHABLE"
   const map = new Map();
   stdout.split('\n').map(l => l.trim()).filter(Boolean).forEach(line => {
     const parts = line.split(/\s+/);
@@ -2992,7 +2992,7 @@ app.get('*', (req, res) => {
 // ---------- Démarrage ----------
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n╔═══════════════════════════════════════╗`);
-  console.log(`║   Chretieno.lan Intranet - v1.0.0     ║`);
+  console.log(`║    Proxmox-Interfaces - v1.0.0        ║`);
   console.log(`╚═══════════════════════════════════════╝`);
   console.log(`  Serveur démarré sur http://0.0.0.0:${PORT}`);
   console.log(`  Accès local : http://localhost:${PORT}\n`);

@@ -15,7 +15,7 @@ else
     scrape_interval: 60s
     static_configs:
       - targets:
-          - '192.168.8.100:9633'
+          - '10.0.0.10:9633'
 EOF"
   echo "Job smartctl ajouté dans prometheus.yml"
 fi
