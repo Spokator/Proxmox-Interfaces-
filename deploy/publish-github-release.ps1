@@ -45,7 +45,21 @@ $payload = @{
 $releaseUrl = "https://api.github.com/repos/$Repo/releases"
 
 Write-Host "[INFO] Creating release $Tag on $Repo..."
-$response = Invoke-RestMethod -Method POST -Uri $releaseUrl -Headers $headers -Body ($payload | ConvertTo-Json -Depth 5) -ContentType "application/json"
+$jsonBody = ($payload | ConvertTo-Json -Depth 10 -Compress)
+$response = $null
+
+try {
+    $response = Invoke-RestMethod -Method POST -Uri $releaseUrl -Headers $headers -Body $jsonBody -ContentType "application/json; charset=utf-8"
+} catch {
+    $errDetails = $_.ErrorDetails.Message
+    # If release already exists for this tag, continue with that release.
+    if ($errDetails -and $errDetails -match 'already_exists') {
+        Write-Host "[WARN] Release already exists for tag $Tag, reusing it."
+        $response = Invoke-RestMethod -Method GET -Uri "https://api.github.com/repos/$Repo/releases/tags/$Tag" -Headers $headers
+    } else {
+        throw
+    }
+}
 
 $uploadUrlRaw = [string]$response.upload_url
 $uploadBase = $uploadUrlRaw -replace "\{\?name,label\}", ""
@@ -65,13 +79,16 @@ foreach ($asset in $Assets) {
     $uri = "${uploadBase}?name=$([uri]::EscapeDataString($assetName))"
 
     Write-Host "[INFO] Uploading $assetName..."
-    Invoke-RestMethod -Method POST -Uri $uri -Headers @{
+    $uploadResp = Invoke-RestMethod -Method POST -Uri $uri -Headers @{
         Authorization = "Bearer $($env:GITHUB_TOKEN)"
         Accept = "application/vnd.github+json"
         "User-Agent" = "Proxmox-Interfaces-Release-Script"
         "X-GitHub-Api-Version" = "2022-11-28"
         "Content-Type" = "application/octet-stream"
     } -InFile $asset
+    if (-not $uploadResp) {
+        throw "Upload failed for asset: $assetName"
+    }
 }
 
 Write-Host "[OK] Release created with assets."
