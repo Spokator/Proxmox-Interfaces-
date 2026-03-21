@@ -77,6 +77,12 @@ docker compose up -d --build
 - Prefer private artifact distribution with checksum verification.
 - Keep bootstrap script public and generic; keep source artifacts private.
 
+## Operations
+
+- Runtime support guide: `SUPPORT_RUNBOOK.md`
+- Quick diagnosis: `bash /opt/proxmox-interfaces/deploy/diagnose.sh`
+- Bundle export: `bash /opt/proxmox-interfaces/deploy/support-bundle.sh`
+
 ## Repository structure
 
 - `server.js`: backend API
