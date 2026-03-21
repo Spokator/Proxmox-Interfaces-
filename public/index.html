@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chretieno.lan — Intranet</title>
+  <meta name="description" content="Hub centralisé de toute l'infrastructure Chretieno" />
+
+  <!-- Favicons -->
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/favicon.png" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <!-- App CSS -->
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════ APP SHELL ═══════════════════════════════════════ -->
+<div id="app">
+
+  <!-- ───── SIDEBAR ───── -->
+  <aside id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"><img src="/favicon.png" alt="Chretieno.lan" class="logo-img" /></div>
+      <div class="logo-text">
+        <span class="logo-title">Chretieno</span>
+        <span class="logo-sub">.lan</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#dashboard"       class="nav-item active"    data-view="dashboard">
+        <i data-lucide="layout-dashboard"></i><span>Dashboard</span>
+      </a>
+      <a href="#services"        class="nav-item"           data-view="services">
+        <i data-lucide="grid-3x3"></i><span>Services</span>
+      </a>
+      <a href="#monitoring"      class="nav-item"           data-view="monitoring">
+        <i data-lucide="activity"></i><span>Monitoring</span>
+      </a>
+      <a href="#infrastructure"  class="nav-item"           data-view="infrastructure">
+        <i data-lucide="network"></i><span>Infrastructure</span>
+      </a>
+      <a href="#notes"           class="nav-item"           data-view="notes">
+        <i data-lucide="sticky-note"></i><span>Notes</span>
+      </a>
+      <a href="#changelog"       class="nav-item"           data-view="changelog">
+        <i data-lucide="clock-4"></i><span>Journal</span>
+      </a>
+      <a href="#admin"           class="nav-item"           data-view="admin">
+        <i data-lucide="settings-2"></i><span>Admin</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="system-health">
+        <div class="health-dot" id="global-health-dot"></div>
+        <span id="global-health-label">Vérification...</span>
+      </div>
+      <div class="sidebar-time" id="sidebar-clock"></div>
+    </div>
+  </aside>
+
+  <!-- ───── MAIN ───── -->
+  <main id="main">
+
+    <!-- TOPBAR -->
+    <header id="topbar">
+      <div class="topbar-left">
+        <button id="sidebar-toggle" class="icon-btn" title="Masquer/afficher le menu">
+          <i data-lucide="menu"></i>
+        </button>
+        <div class="breadcrumb" id="breadcrumb">
+          <span>Dashboard</span>
+        </div>
+      </div>
+      <div class="topbar-center">
+        <div class="search-box">
+          <i data-lucide="search"></i>
+          <input type="text" id="global-search" placeholder="Rechercher un service... (Ctrl+K)" autocomplete="off" />
+          <kbd>Ctrl+K</kbd>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button id="refresh-btn" class="icon-btn" title="Actualiser les statuts">
+          <i data-lucide="refresh-cw"></i>
+        </button>
+        <div class="status-badge" id="topbar-status">
+          <i data-lucide="circle"></i>
+          <span id="topbar-status-text">—</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- SEARCH RESULTS OVERLAY -->
+    <div id="search-overlay" class="search-overlay hidden">
+      <div id="search-results"></div>
+    </div>
+
+    <!-- ══════════ VIEW : DASHBOARD ══════════ -->
+    <section id="view-dashboard" class="view active">
+      <div class="view-header">
+        <h1>Dashboard</h1>
+        <p>Vue d'ensemble de votre infrastructure</p>
+      </div>
+
+      <!-- Stats rapides -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="--c:#22c55e"><i data-lucide="check-circle-2"></i></div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-up">—</div>
+            <div class="stat-label">Services UP</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="--c:#ef4444"><i data-lucide="x-circle"></i></div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-down">—</div>
+            <div class="stat-label">Services DOWN</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="--c:#6366f1"><i data-lucide="server"></i></div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-total">—</div>
+            <div class="stat-label">Services total</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="--c:#f59e0b"><i data-lucide="boxes"></i></div>
+          <div class="stat-body">
+            <div class="stat-value">8</div>
+            <div class="stat-label">Conteneurs LXC</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Favoris -->
+      <div class="section-header">
+        <h2><i data-lucide="star"></i> Accès rapides</h2>
+        <span class="section-hint">Services marqués comme favoris</span>
+      </div>
+      <div class="services-grid" id="favorites-grid"></div>
+
+      <!-- Catégories rapides -->
+      <div class="section-header">
+        <h2><i data-lucide="layers"></i> Par catégorie</h2>
+      </div>
+      <div class="categories-overview" id="categories-overview"></div>
+
+      <!-- Actions rapides Grafana -->
+      <div class="section-header">
+        <h2><i data-lucide="bar-chart-2"></i> Monitoring rapide</h2>
+      </div>
+      <div class="quick-links-grid">
+        <a href="http://monitoring.lan/d/Dp7Cd57Zza/proxmox-via-prometheus?orgId=1&from=now-6h&to=now&timezone=browser&var-instance=192.168.8.100&refresh=10s"
+           target="_blank" class="quick-link-card">
+          <i data-lucide="server"></i>
+          <div>
+            <div class="ql-title">Proxmox — Monitoring</div>
+            <div class="ql-sub">CPU · RAM · Disque · Réseau (refresh 10s)</div>
+          </div>
+          <i data-lucide="external-link" class="ql-arrow"></i>
+        </a>
+        <a href="http://monitoring.lan/d/Oxed_c6Wz/nvidia-dashboard?orgId=1&from=now-6h&to=now&timezone=browser&var-instance=192.168.8.165:9400&var-gpu=$__all&refresh=auto"
+           target="_blank" class="quick-link-card">
+          <i data-lucide="cpu"></i>
+          <div>
+            <div class="ql-title">NVIDIA GPU — Ollama</div>
+            <div class="ql-sub">VRAM · Température · Utilisation GPU</div>
+          </div>
+          <i data-lucide="external-link" class="ql-arrow"></i>
+        </a>
+        <a href="http://alerte.lan/dashboard" target="_blank" class="quick-link-card">
+          <i data-lucide="bell"></i>
+          <div>
+            <div class="ql-title">Uptime Kuma — Alertes</div>
+            <div class="ql-sub">Disponibilité de tous les services</div>
+          </div>
+          <i data-lucide="external-link" class="ql-arrow"></i>
+        </a>
+        <a href="http://monitoring.lan:9090/targets" target="_blank" class="quick-link-card">
+          <i data-lucide="database"></i>
+          <div>
+            <div class="ql-title">Prometheus — Targets</div>
+            <div class="ql-sub">3 endpoints actifs (pve-exporter + GPU)</div>
+          </div>
+          <i data-lucide="external-link" class="ql-arrow"></i>
+        </a>
+      </div>
+    </section>
+
+    <!-- ══════════ VIEW : SERVICES ══════════ -->
+    <section id="view-services" class="view">
+      <div class="view-header">
+        <h1>Services</h1>
+        <p>Catalogue complet de tous les services déployés</p>
+      </div>
+
+      <!-- Filtres -->
+      <div class="filter-bar">
+        <button class="filter-btn active" data-filter="all">
+          <i data-lucide="list"></i> Tous
+        </button>
+        <button class="filter-btn" data-filter="up">
+          <i data-lucide="check-circle-2"></i> En ligne
+        </button>
+        <button class="filter-btn" data-filter="down">
+          <i data-lucide="x-circle"></i> Hors ligne
+        </button>
+        <div class="filter-separator"></div>
+        <div id="category-filters"></div>
+      </div>
+
+      <!-- Grille services -->
+      <div class="services-grid large" id="services-grid"></div>
+    </section>
+
+    <!-- ══════════ VIEW : MONITORING ══════════ -->
+    <section id="view-monitoring" class="view">
+      <div class="view-header">
+        <h1>Monitoring</h1>
+        <p>Surveillance en temps réel de l'infrastructure</p>
+      </div>
+
+      <div class="monitoring-layout">
+        <!-- Vue d'ensemble (graphiques live) -->
+        <div class="monitoring-section">
+          <div class="overview-range" id="overview-range">
+            <button class="range-toggle-btn" id="overview-range-toggle" type="button">
+              <i data-lucide="sliders-horizontal"></i>
+              Filtre
+              <i data-lucide="chevron-up" class="chev"></i>
+            </button>
+            <div class="range-panel hidden" id="overview-range-panel">
+              <button class="range-btn active" data-range-min="5" type="button">5 min</button>
+              <button class="range-btn" data-range-min="15" type="button">15 min</button>
+              <button class="range-btn" data-range-min="60" type="button">1 h</button>
+              <button class="range-btn" data-range-min="180" type="button">3 h</button>
+              <button class="range-btn" data-range-min="360" type="button">6 h</button>
+              <button class="range-btn" data-range-min="720" type="button">12 h</button>
+              <button class="range-btn" data-range-min="1440" type="button">24 h</button>
+              <button class="range-btn" data-range-min="2880" type="button">48 h</button>
+              <button class="range-btn" data-range-min="10080" type="button">7 j</button>
+            </div>
+          </div>
+          <div class="overview-grid" id="monitoring-overview">
+            <div class="overview-card">
+              <div class="overview-header">
+                <span class="overview-label"><i data-lucide="cpu"></i> CPU Proxmox</span>
+                <span class="overview-value" id="ov-cpu-text">—</span>
+              </div>
+              <div class="spark" style="--c: rgba(99,102,241,0.95);">
+                <svg class="sparkline" id="ov-cpu-spark" viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path class="spark-area" d=""></path>
+                  <path class="spark-line" d=""></path>
+                  <line class="spark-cursor" x1="0" y1="0" x2="0" y2="30"></line>
+                  <circle class="spark-dot" cx="0" cy="0" r="2.5"></circle>
+                </svg>
+              </div>
+            </div>
+            <div class="overview-card">
+              <div class="overview-header">
+                <span class="overview-label"><i data-lucide="memory-stick"></i> RAM Proxmox</span>
+                <span class="overview-value" id="ov-ram-text">—</span>
+              </div>
+              <div class="spark" style="--c: rgba(34,197,94,0.95);">
+                <svg class="sparkline" id="ov-ram-spark" viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path class="spark-area" d=""></path>
+                  <path class="spark-line" d=""></path>
+                  <line class="spark-cursor" x1="0" y1="0" x2="0" y2="30"></line>
+                  <circle class="spark-dot" cx="0" cy="0" r="2.5"></circle>
+                </svg>
+              </div>
+            </div>
+            <div class="overview-card">
+              <div class="overview-header">
+                <span class="overview-label"><i data-lucide="hard-drive"></i> Stockage Proxmox</span>
+                <span class="overview-value" id="ov-disk-text">—</span>
+              </div>
+              <div class="spark" style="--c: rgba(245,158,11,0.95);">
+                <svg class="sparkline" id="ov-disk-spark" viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path class="spark-area" d=""></path>
+                  <path class="spark-line" d=""></path>
+                  <line class="spark-cursor" x1="0" y1="0" x2="0" y2="30"></line>
+                  <circle class="spark-dot" cx="0" cy="0" r="2.5"></circle>
+                </svg>
+              </div>
+            </div>
+            <div class="overview-card">
+              <div class="overview-header">
+                <span class="overview-label"><i data-lucide="gpu"></i> VRAM (GPU)</span>
+                <span class="overview-value" id="ov-vram-text">—</span>
+              </div>
+              <div class="spark" style="--c: rgba(139,92,246,0.95);">
+                <svg class="sparkline" id="ov-vram-spark" viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path class="spark-area" d=""></path>
+                  <path class="spark-line" d=""></path>
+                  <line class="spark-cursor" x1="0" y1="0" x2="0" y2="30"></line>
+                  <circle class="spark-dot" cx="0" cy="0" r="2.5"></circle>
+                </svg>
+              </div>
+              <div class="overview-hint" id="ov-vram-hint">Source: Prometheus / NVIDIA exporter (si disponible)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monitoring Stockage Proxmox -->
+        <details class="monitoring-section monitoring-collapsible" data-collapsible-key="monitoring-storage" open>
+          <summary class="monitoring-title monitoring-summary">
+            <span class="monitoring-summary-main"><i data-lucide="hard-drive"></i> Monitoring Stockage</span>
+            <i data-lucide="chevron-down" class="monitoring-summary-chevron"></i>
+          </summary>
+          <div class="storage-monitoring-grid" id="monitoring-storage-grid">
+            <div class="loading-spinner">Chargement des pools de stockage...</div>
+          </div>
+        </details>
+
+        <!-- Monitoring CT/VM (temps réel) -->
+        <details class="monitoring-section monitoring-collapsible" data-collapsible-key="monitoring-ctvm" open>
+          <summary class="monitoring-title monitoring-summary">
+            <span class="monitoring-summary-main"><i data-lucide="server"></i> Monitoring CT/VM</span>
+            <i data-lucide="chevron-down" class="monitoring-summary-chevron"></i>
+          </summary>
+          <div class="infra-metrics">
+            <div class="infra-metrics-head">
+              <span>Machine</span>
+              <span>IP</span>
+              <span>Statut</span>
+              <span>CPU</span>
+              <span>RAM</span>
+              <span>Disque</span>
+              <span>Uptime</span>
+            </div>
+            <div id="monitoring-infra-list" class="infra-metrics-body">
+              <div class="loading-spinner">Chargement des métriques...</div>
+            </div>
+          </div>
+        </details>
+
+        <!-- Services status list -->
+        <details class="monitoring-section monitoring-collapsible" data-collapsible-key="monitoring-services" open>
+          <summary class="monitoring-title monitoring-summary">
+            <span class="monitoring-summary-main"><i data-lucide="activity"></i> Statuts des services</span>
+            <i data-lucide="chevron-down" class="monitoring-summary-chevron"></i>
+          </summary>
+          <div class="status-list" id="monitoring-status-list">
+            <div class="loading-spinner">Chargement des statuts...</div>
+          </div>
+        </details>
+
+        <!-- Liens Grafana Dashboards -->
+        <details class="monitoring-section monitoring-collapsible" data-collapsible-key="monitoring-grafana" open>
+          <summary class="monitoring-title monitoring-summary">
+            <span class="monitoring-summary-main"><i data-lucide="bar-chart-2"></i> Grafana Dashboards</span>
+            <i data-lucide="chevron-down" class="monitoring-summary-chevron"></i>
+          </summary>
+          <div class="monitoring-cards">
+            <div class="monitoring-card">
+              <div class="mc-header">
+                <i data-lucide="server" style="color:#22c55e"></i>
+                <span>Proxmox VE — Monitoring complet</span>
+              </div>
+              <p>Surveillance CPU, RAM, stockage et réseau de l'hôte Proxmox (192.168.8.100). Données Prometheus via pve-exporter, rafraîchissement toutes les 10 secondes.</p>
+              <div class="mc-meta">
+                <span><i data-lucide="clock"></i> Refresh: 10s</span>
+                <span><i data-lucide="server"></i> 192.168.8.100</span>
+              </div>
+              <a href="http://monitoring.lan/d/Dp7Cd57Zza/proxmox-via-prometheus?orgId=1&from=now-6h&to=now&timezone=browser&var-instance=192.168.8.100&refresh=10s"
+                 target="_blank" class="btn-primary">
+                <i data-lucide="external-link"></i> Ouvrir le dashboard
+              </a>
+            </div>
+
+            <div class="monitoring-card">
+              <div class="mc-header">
+                <i data-lucide="cpu" style="color:#8b5cf6"></i>
+                <span>NVIDIA GPU — Utilisation Ollama</span>
+              </div>
+              <p>Monitoring de la VRAM, température et utilisation du GPU NVIDIA configuré sur 192.168.8.165. Essentiel pour surveiller la charge des modèles LLM Ollama.</p>
+              <div class="mc-meta">
+                <span><i data-lucide="clock"></i> Refresh: auto</span>
+                <span><i data-lucide="cpu"></i> 192.168.8.165:9400</span>
+              </div>
+              <a href="http://monitoring.lan/d/Oxed_c6Wz/nvidia-dashboard?orgId=1&from=now-6h&to=now&timezone=browser&var-instance=192.168.8.165:9400&var-gpu=$__all&refresh=auto"
+                 target="_blank" class="btn-primary">
+                <i data-lucide="external-link"></i> Ouvrir le dashboard
+              </a>
+            </div>
+          </div>
+        </details>
+
+        <!-- Prometheus -->
+        <details class="monitoring-section monitoring-collapsible" data-collapsible-key="monitoring-prometheus" open>
+          <summary class="monitoring-title monitoring-summary">
+            <span class="monitoring-summary-main"><i data-lucide="database"></i> Prometheus</span>
+            <i data-lucide="chevron-down" class="monitoring-summary-chevron"></i>
+          </summary>
+          <div class="monitoring-cards">
+            <div class="monitoring-card">
+              <div class="mc-header">
+                <i data-lucide="target" style="color:#f59e0b"></i>
+                <span>Targets actifs</span>
+              </div>
+              <p>3 endpoints configurés : pve-exporter pour Proxmox, NVIDIA exporter (192.168.8.165:9400), et node-exporter. Scraping continu pour alimenter Grafana.</p>
+              <div class="mc-meta">
+                <span><i data-lucide="radio"></i> 3 targets actifs</span>
+                <span><i data-lucide="server"></i> 192.168.8.180:9090</span>
+              </div>
+              <a href="http://monitoring.lan:9090/targets" target="_blank" class="btn-secondary">
+                <i data-lucide="external-link"></i> Voir les targets
+              </a>
+            </div>
+          </div>
+        </details>
+
+        <!-- Uptime Kuma -->
+        <details class="monitoring-section monitoring-collapsible" data-collapsible-key="monitoring-uptimekuma" open>
+          <summary class="monitoring-title monitoring-summary">
+            <span class="monitoring-summary-main"><i data-lucide="bell"></i> Uptime Kuma</span>
+            <i data-lucide="chevron-down" class="monitoring-summary-chevron"></i>
+          </summary>
+          <div class="monitoring-cards">
+            <div class="monitoring-card">
+              <div class="mc-header">
+                <i data-lucide="shield-check" style="color:#22c55e"></i>
+                <span>Surveillance & Alertes Discord</span>
+              </div>
+              <p>Monitoring de disponibilité de toutes les IPs, ports et services de l'infrastructure. Alertes automatiques sur Discord en cas de panne ou de dégradation.</p>
+              <div class="mc-meta">
+                <span><i data-lucide="message-circle"></i> Alertes Discord</span>
+                <span><i data-lucide="server"></i> 192.168.8.189:3001</span>
+              </div>
+              <a href="http://alerte.lan/dashboard" target="_blank" class="btn-secondary">
+                <i data-lucide="external-link"></i> Ouvrir Uptime Kuma
+              </a>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ══════════ VIEW : INFRASTRUCTURE ══════════ -->
+    <section id="view-infrastructure" class="view">
+      <div class="view-header">
+        <h1>Infrastructure</h1>
+        <p>Topologie réseau — Proxmox 192.168.8.0/24</p>
+      </div>
+
+      <!-- Topologie visuelle -->
+      <div class="infra-topology" id="infra-topology"></div>
+
+      <!-- Tableau des IPs -->
+      <details class="monitoring-section monitoring-collapsible" data-collapsible-key="infra-ip-table" open>
+        <summary class="monitoring-title monitoring-summary">
+          <span class="monitoring-summary-main"><i data-lucide="table"></i> Tableau des adresses et ports</span>
+          <i data-lucide="chevron-down" class="monitoring-summary-chevron"></i>
+        </summary>
+        <div class="ip-table-wrapper">
+          <table class="ip-table" id="ip-table">
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Domaine .lan</th>
+                <th>IP</th>
+                <th>Port</th>
+                <th>Conteneur</th>
+                <th>Accès</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+            <tbody id="ip-table-body"></tbody>
+          </table>
+        </div>
+      </details>
+
+      <details class="monitoring-section monitoring-collapsible" data-collapsible-key="infra-containers" open>
+        <summary class="monitoring-title monitoring-summary">
+          <span class="monitoring-summary-main"><i data-lucide="box"></i> Conteneurs Proxmox</span>
+          <i data-lucide="chevron-down" class="monitoring-summary-chevron"></i>
+        </summary>
+        <div class="containers-grid" id="containers-grid"></div>
+      </details>
+    </section>
+
+    <!-- ══════════ VIEW : NOTES ══════════ -->
+    <section id="view-notes" class="view">
+      <div class="view-header-flex">
+        <div>
+          <h1>Notes</h1>
+          <p>Notes rapides et informations importantes sur l'infrastructure</p>
+        </div>
+        <button class="btn-primary" id="new-note-btn">
+          <i data-lucide="plus"></i> Nouvelle note
+        </button>
+      </div>
+
+      <!-- Formulaire nouvelle note -->
+      <div id="note-form" class="note-form hidden">
+        <div class="form-row">
+          <input type="text" id="note-title" placeholder="Titre de la note..." class="form-input" />
+          <div class="color-picker">
+            <button class="color-dot active" style="background:#6366f1" data-color="#6366f1"></button>
+            <button class="color-dot" style="background:#22c55e" data-color="#22c55e"></button>
+            <button class="color-dot" style="background:#f59e0b" data-color="#f59e0b"></button>
+            <button class="color-dot" style="background:#ef4444" data-color="#ef4444"></button>
+            <button class="color-dot" style="background:#ec4899" data-color="#ec4899"></button>
+            <button class="color-dot" style="background:#06b6d4" data-color="#06b6d4"></button>
+          </div>
+        </div>
+        <textarea id="note-content" placeholder="Contenu de la note... (Markdown supporté)" class="form-textarea" rows="5"></textarea>
+        <div class="form-actions">
+          <button class="btn-primary" id="save-note-btn"><i data-lucide="save"></i> Sauvegarder</button>
+          <button class="btn-ghost" id="cancel-note-btn"><i data-lucide="x"></i> Annuler</button>
+        </div>
+      </div>
+
+      <div class="notes-grid" id="notes-grid">
+        <div class="loading-spinner">Chargement des notes...</div>
+      </div>
+    </section>
+
+    <!-- ══════════ VIEW : CHANGELOG ══════════ -->
+    <section id="view-changelog" class="view">
+      <div class="view-header-flex">
+        <div>
+          <h1>Journal de bord</h1>
+          <p>Historique des modifications et événements de l'infrastructure</p>
+        </div>
+        <button class="btn-primary" id="new-log-btn">
+          <i data-lucide="plus"></i> Ajouter une entrée
+        </button>
+      </div>
+
+      <!-- Formulaire nouvelle entrée -->
+      <div id="log-form" class="note-form hidden">
+        <div class="form-row">
+          <select id="log-type" class="form-select">
+            <option value="info">ℹ️ Info</option>
+            <option value="add">➕ Ajout</option>
+            <option value="update">🔄 Mise à jour</option>
+            <option value="delete">❌ Suppression</option>
+            <option value="fix">🔧 Correction</option>
+            <option value="alert">⚠️ Alerte</option>
+          </select>
+        </div>
+        <textarea id="log-message" placeholder="Décrivez la modification ou l'événement..." class="form-textarea" rows="3"></textarea>
+        <div class="form-actions">
+          <button class="btn-primary" id="save-log-btn"><i data-lucide="save"></i> Enregistrer</button>
+          <button class="btn-ghost" id="cancel-log-btn"><i data-lucide="x"></i> Annuler</button>
+        </div>
+      </div>
+
+      <div class="changelog-toolbar">
+        <div class="changelog-search-wrap">
+          <i data-lucide="search"></i>
+          <input type="text" id="changelog-search" class="form-input" placeholder="Rechercher dans le journal..." />
+        </div>
+        <div class="changelog-filter-wrap">
+          <select id="changelog-filter-type" class="form-select">
+            <option value="all">Tous les types</option>
+            <option value="info">Info</option>
+            <option value="add">Ajout</option>
+            <option value="update">Mise à jour</option>
+            <option value="delete">Suppression</option>
+            <option value="fix">Correction</option>
+            <option value="alert">Alerte</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="changelog-list" id="changelog-list">
+        <div class="loading-spinner">Chargement du journal...</div>
+      </div>
+      <div class="changelog-pagination" id="changelog-pagination"></div>
+    </section>
+
+    <!-- ══════════ VIEW : ADMIN ══════════ -->
+    <section id="view-admin" class="view">
+      <div class="view-header">
+        <h1>Administration</h1>
+        <p>Gérer les services, la configuration et les accès</p>
+      </div>
+
+      <div class="admin-layout">
+        <!-- Ajouter un service -->
+        <details class="admin-card monitoring-collapsible" data-collapsible-key="admin-add-service" open>
+          <summary class="monitoring-summary">
+            <span class="monitoring-summary-main"><i data-lucide="plus-circle"></i> Ajouter un service</span>
+            <i data-lucide="chevron-down" class="monitoring-summary-chevron"></i>
+          </summary>
+          <form id="add-service-form" class="admin-form">
+            <div class="form-group">
+              <label>Identifiant unique <span class="req">*</span></label>
+              <input type="text" name="id" placeholder="ex: mon-service" required class="form-input" />
+            </div>
+            <div class="form-group">
+              <label>Nom affiché <span class="req">*</span></label>
+              <input type="text" name="name" placeholder="ex: Mon Service" required class="form-input" />
+            </div>
+            <div class="form-group">
+              <label>Catégorie <span class="req">*</span></label>
+              <select name="category" required class="form-select" id="admin-category-select">
+                <option value="">Choisir une catégorie...</option>
+                <option value="infrastructure">Infrastructure</option>
+                <option value="ia">Intelligence Artificielle</option>
+                <option value="creation">Création & Médias</option>
+                <option value="gestion">Gestion IT</option>
+                <option value="documentation">Documentation</option>
+                <option value="monitoring">Monitoring & Alertes</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>URL d'accès <span class="req">*</span></label>
+              <input type="url" name="url" placeholder="http://192.168.8.xxx:port" required class="form-input" />
+            </div>
+            <div class="form-group">
+              <label>Domaine .lan</label>
+              <input type="text" name="domain" placeholder="http://monservice.lan" class="form-input" />
+            </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Adresse IP</label>
+                <input type="text" name="ip" placeholder="192.168.8.xxx" class="form-input" />
+              </div>
+              <div class="form-group">
+                <label>Port</label>
+                <input type="number" name="port" placeholder="80" class="form-input" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Protocole</label>
+              <select name="protocol" class="form-select">
+                <option value="http">HTTP</option>
+                <option value="https">HTTPS</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Description courte</label>
+              <input type="text" name="description" placeholder="Description en une ligne" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label>Description détaillée</label>
+              <textarea name="longDescription" placeholder="Description complète du service, ses fonctionnalités..." class="form-textarea" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Conteneur</label>
+              <input type="text" name="container" placeholder="ex: CT 101" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label>Tags (séparés par des virgules)</label>
+              <input type="text" name="tags" placeholder="tag1, tag2, tag3" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" name="favorite" /> Ajouter aux favoris
+              </label>
+            </div>
+            <button type="submit" class="btn-primary full-width">
+              <i data-lucide="plus"></i> Ajouter le service
+            </button>
+            <div id="add-service-result" class="form-result hidden"></div>
+          </form>
+        </details>
+
+        <!-- Liste des services existants -->
+        <details class="admin-card monitoring-collapsible wide" data-collapsible-key="admin-services-existing" open>
+          <summary class="monitoring-summary">
+            <span class="monitoring-summary-main"><i data-lucide="list"></i> Services existants</span>
+            <i data-lucide="chevron-down" class="monitoring-summary-chevron"></i>
+          </summary>
+          <p class="admin-hint">Cliquez sur un service pour le modifier ou le supprimer.</p>
+          <div id="admin-services-list"></div>
+        </details>
+
+        <details class="admin-card monitoring-collapsible full-row" data-collapsible-key="admin-watchers-health" open>
+          <summary class="monitoring-summary">
+            <span class="monitoring-summary-main"><i data-lucide="pulse"></i> Santé des watchers Proxmox</span>
+            <i data-lucide="chevron-down" class="monitoring-summary-chevron"></i>
+          </summary>
+          <p class="admin-hint">État runtime et persistance des collecteurs Proxmox (tasks/syslog).</p>
+          <div id="admin-proxmox-config-status" class="admin-proxmox-config-status">
+            <div class="loading-spinner">Vérification configuration Proxmox...</div>
+          </div>
+          <div class="watchers-actions">
+            <button id="admin-watchers-refresh" class="btn-secondary"><i data-lucide="refresh-cw"></i> Rafraîchir</button>
+          </div>
+          <div id="admin-watchers-status" class="admin-watchers-status">
+            <div class="loading-spinner">Chargement...</div>
+          </div>
+        </details>
+
+        <details class="admin-card monitoring-collapsible full-row" data-collapsible-key="admin-migration-client" open>
+          <summary class="monitoring-summary">
+            <span class="monitoring-summary-main"><i data-lucide="rocket"></i> Migration Nouveau Client</span>
+            <i data-lucide="chevron-down" class="monitoring-summary-chevron"></i>
+          </summary>
+          <p class="admin-hint">Assistant de préparation commerciale: profil client, checklist automatique, score de readiness et export runbook.</p>
+
+          <div id="admin-migration-steps" class="admin-migration-steps"></div>
+
+          <div class="admin-migration-actions">
+            <button type="button" id="admin-migration-autofill" class="btn-secondary"><i data-lucide="wand-sparkles"></i> Préremplir depuis cette infra</button>
+            <label class="checkbox-label admin-migration-auto-toggle"><input type="checkbox" id="admin-migration-auto-audit" /> Audit continu (15s)</label>
+          </div>
+
+          <form id="admin-migration-form" class="admin-form admin-migration-form">
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Nom du client <span class="req">*</span></label>
+                <input type="text" name="clientName" class="form-input" placeholder="ex: Dataservices" required />
+              </div>
+              <div class="form-group">
+                <label>Code projet</label>
+                <input type="text" name="projectCode" class="form-input" placeholder="ex: DS-2026-01" />
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Proxmox host cible <span class="req">*</span></label>
+                <input type="text" name="proxmoxHost" class="form-input" placeholder="ex: 10.0.0.10" required />
+              </div>
+              <div class="form-group">
+                <label>Port API</label>
+                <input type="number" name="proxmoxPort" class="form-input" placeholder="8006" />
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Token ID attendu</label>
+                <input type="text" name="tokenId" class="form-input" placeholder="ex: chretieno@pve!intranet" />
+              </div>
+              <div class="form-group">
+                <label>Sous-réseau client</label>
+                <input type="text" name="networkSubnet" class="form-input" placeholder="ex: 192.168.8.0/24" />
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Gateway</label>
+                <input type="text" name="gateway" class="form-input" placeholder="ex: 192.168.8.1" />
+              </div>
+              <div class="form-group">
+                <label>DNS</label>
+                <input type="text" name="dns" class="form-input" placeholder="ex: 192.168.8.150,1.1.1.1" />
+              </div>
+            </div>
+
+            <div class="admin-migration-flags">
+              <label class="checkbox-label"><input type="checkbox" name="compatibilityMode" checked /> Mode compatibilite infra actuelle (safe)</label>
+              <label class="checkbox-label"><input type="checkbox" name="requirePowerMgmt" checked /> Actions power requises (start/stop)</label>
+              <label class="checkbox-label"><input type="checkbox" name="requirePrometheus" /> Monitoring Prometheus requis</label>
+              <label class="checkbox-label"><input type="checkbox" name="requireTechnitium" /> DNS Technitium requis</label>
+              <label class="checkbox-label"><input type="checkbox" name="rollbackReady" /> Plan de rollback prêt</label>
+              <label class="checkbox-label"><input type="checkbox" name="businessSignoff" /> Validation métier finale obtenue</label>
+            </div>
+
+            <div class="form-group">
+              <label>Notes migration</label>
+              <textarea name="notes" class="form-textarea" rows="3" placeholder="Contraintes client, exceptions, dépendances..."></textarea>
+            </div>
+
+            <div class="admin-migration-actions">
+              <button type="button" id="admin-migration-audit" class="btn-secondary"><i data-lucide="shield-check"></i> Lancer audit readiness</button>
+              <button type="button" id="admin-migration-save" class="btn-ghost"><i data-lucide="save"></i> Sauvegarder profil</button>
+              <button type="button" id="admin-migration-reset" class="btn-ghost"><i data-lucide="rotate-ccw"></i> Réinitialiser</button>
+            </div>
+            <div id="admin-migration-result" class="form-result hidden"></div>
+          </form>
+
+          <div id="admin-migration-summary" class="admin-migration-summary">
+            <div class="loading-spinner">Audit non lancé</div>
+          </div>
+
+          <div id="admin-migration-checklist" class="admin-migration-checklist">
+            <div class="empty-state" style="padding:18px"><p>Renseignez le profil puis lancez l'audit readiness.</p></div>
+          </div>
+
+          <div id="admin-migration-plan" class="admin-migration-plan">
+            <div class="empty-state" style="padding:18px"><p>Plan d'actions généré après audit.</p></div>
+          </div>
+
+          <div class="admin-migration-actions">
+            <button type="button" id="admin-migration-export-json" class="btn-secondary"><i data-lucide="download"></i> Export profil JSON</button>
+            <button type="button" id="admin-migration-export-runbook" class="btn-secondary"><i data-lucide="file-text"></i> Export runbook</button>
+          </div>
+        </details>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ═══════════════════════ SERVICE MODAL ═══════════════════════ -->
+<div id="service-modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-overlay" id="modal-overlay"></div>
+  <div class="modal-content">
+    <button class="modal-close" id="modal-close"><i data-lucide="x"></i></button>
+
+    <div class="modal-header">
+      <div class="modal-icon" id="modal-icon"><i data-lucide="server"></i></div>
+      <div class="modal-title-block">
+        <h2 id="modal-name">—</h2>
+        <div class="modal-badges">
+          <span id="modal-category-badge" class="badge"></span>
+          <span id="modal-status-badge" class="status-badge-modal"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-body">
+      <p id="modal-long-desc" class="modal-desc"></p>
+
+      <div class="modal-info-grid">
+        <div class="info-item"><i data-lucide="globe"></i><div><div class="info-label">Domaine</div><a id="modal-domain" href="#" target="_blank" class="info-value link">—</a></div></div>
+        <div class="info-item"><i data-lucide="wifi"></i><div><div class="info-label">IP directe</div><a id="modal-url" href="#" target="_blank" class="info-value link mono">—</a></div></div>
+        <div class="info-item"><i data-lucide="server"></i><div><div class="info-label">Conteneur</div><div class="info-value" id="modal-container">—</div></div></div>
+        <div class="info-item"><i data-lucide="lock"></i><div><div class="info-label">Protocole</div><div class="info-value" id="modal-protocol">—</div></div></div>
+      </div>
+
+      <div id="modal-features-section">
+        <h3>Fonctionnalités</h3>
+        <ul id="modal-features" class="features-list"></ul>
+      </div>
+
+      <div id="modal-tags-section">
+        <div id="modal-tags" class="tags-list"></div>
+      </div>
+
+      <div id="modal-dashboards-section" class="hidden">
+        <h3>Dashboards Grafana</h3>
+        <div id="modal-dashboards" class="dashboards-list"></div>
+      </div>
+
+      <div id="modal-creds-section" class="hidden">
+        <h3>Accès</h3>
+        <div id="modal-creds" class="creds-box"></div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <a id="modal-open-btn" href="#" target="_blank" class="btn-primary">
+        <i data-lucide="external-link"></i> Ouvrir le service
+      </a>
+      <button id="modal-promote-btn" class="btn-secondary hidden">
+        <i data-lucide="check-check"></i> Valider ce service
+      </button>
+      <button id="modal-reject-btn" class="btn-ghost hidden">
+        <i data-lucide="x-circle"></i> Refuser ce service
+      </button>
+      <button class="btn-ghost" id="modal-close-footer">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ CONTAINER MODAL ═══════════════════════ -->
+<div id="container-modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-overlay" id="ct-modal-overlay"></div>
+  <div class="modal-content">
+    <button class="modal-close" id="ct-modal-close"><i data-lucide="x"></i></button>
+
+    <div class="modal-header">
+      <div class="modal-icon" id="ct-modal-icon"><i data-lucide="box"></i></div>
+      <div class="modal-title-block">
+        <h2 id="ct-modal-name">—</h2>
+        <div class="modal-badges">
+          <span id="ct-modal-ip" class="badge"></span>
+          <span id="ct-modal-os" class="badge"></span>
+          <span id="ct-modal-power-state" class="badge ct-power-state hidden"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-body">
+      <p id="ct-modal-desc" class="modal-desc"></p>
+
+      <div class="modal-info-grid">
+        <div class="info-item"><i data-lucide="wifi"></i><div><div class="info-label">IP</div><div class="info-value mono" id="ct-modal-ip-value">—</div></div></div>
+        <div class="info-item"><i data-lucide="monitor"></i><div><div class="info-label">OS</div><div class="info-value" id="ct-modal-os-value">—</div></div></div>
+        <div class="info-item"><i data-lucide="cpu"></i><div><div class="info-label">CPU</div><div class="info-value" id="ct-modal-cpu">—</div></div></div>
+        <div class="info-item"><i data-lucide="memory-stick"></i><div><div class="info-label">RAM</div><div class="info-value" id="ct-modal-ram">—</div></div></div>
+      </div>
+
+      <div id="ct-modal-resources-section">
+        <h3>Ressources</h3>
+        <div id="ct-modal-resources" class="tags-list"></div>
+      </div>
+
+      <div id="ct-modal-services-section">
+        <h3>Services du conteneur</h3>
+        <div id="ct-modal-services" class="status-list"></div>
+      </div>
+    </div>
+
+    <div class="modal-footer ct-modal-footer">
+      <div class="ct-modal-footer-actions">
+        <button class="btn-secondary" id="ct-modal-start-btn">
+          <i data-lucide="power"></i> Allumer
+        </button>
+        <button class="btn-ghost" id="ct-modal-stop-btn">
+          <i data-lucide="power-off"></i> Éteindre
+        </button>
+      </div>
+      <button class="btn-ghost" id="ct-modal-close-footer">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ EDIT SERVICE MODAL ═══════════════════════ -->
+<div id="edit-service-modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-overlay" id="edit-modal-overlay"></div>
+  <div class="modal-content">
+    <button class="modal-close" id="edit-modal-close"><i data-lucide="x"></i></button>
+
+    <div class="modal-header">
+      <div class="modal-icon" id="edit-modal-icon"><i data-lucide="settings"></i></div>
+      <div class="modal-title-block">
+        <h2 id="edit-modal-title">Modifier le service</h2>
+        <div class="modal-badges">
+          <span id="edit-modal-id" class="badge">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-body">
+      <form id="edit-service-form" class="admin-form">
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Nom <span class="req">*</span></label>
+            <input class="form-input" name="name" id="edit-name" placeholder="Nom du service" required />
+          </div>
+          <div class="form-group">
+            <label>Catégorie <span class="req">*</span></label>
+            <select class="form-select" name="category" id="edit-category" required></select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>URL (accès) <span class="req">*</span></label>
+          <input class="form-input" name="url" id="edit-url" placeholder="http://..." required />
+        </div>
+
+        <div class="form-group">
+          <label>Domaine (.lan)</label>
+          <input class="form-input" name="domain" id="edit-domain" placeholder="http://service.lan" />
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <textarea class="form-textarea" name="description" id="edit-description" placeholder="Description courte..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Tags (séparés par des virgules)</label>
+          <input class="form-input" name="tags" id="edit-tags" placeholder="tag1, tag2, tag3" />
+        </div>
+
+        <div id="edit-service-result" class="form-result hidden"></div>
+      </form>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" id="edit-cancel-btn">Annuler</button>
+      <button class="btn-primary" id="edit-save-btn"><i data-lucide="save"></i> Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ CHANGELOG EVENT MODAL ═══════════════════════ -->
+<div id="changelog-modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-overlay" id="cl-modal-overlay"></div>
+  <div class="modal-content">
+    <button class="modal-close" id="cl-modal-close"><i data-lucide="x"></i></button>
+
+    <div class="modal-header">
+      <div class="modal-icon" id="cl-modal-icon"><i data-lucide="history"></i></div>
+      <div class="modal-title-block">
+        <h2 id="cl-modal-title">Détail événement</h2>
+        <div class="modal-badges">
+          <span id="cl-modal-type" class="cl-type-badge info">Info</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-body">
+      <div class="modal-info-grid">
+        <div class="info-item"><i data-lucide="calendar"></i><div><div class="info-label">Date</div><div class="info-value" id="cl-modal-date">—</div></div></div>
+        <div class="info-item"><i data-lucide="shield"></i><div><div class="info-label">Auteur</div><div class="info-value" id="cl-modal-author">—</div></div></div>
+        <div class="info-item"><i data-lucide="server"></i><div><div class="info-label">Service</div><div class="info-value" id="cl-modal-service">—</div></div></div>
+        <div class="info-item"><i data-lucide="hash"></i><div><div class="info-label">ID événement</div><div class="info-value mono" id="cl-modal-id">—</div></div></div>
+        <div class="info-item"><i data-lucide="workflow"></i><div><div class="info-label">Source</div><div class="info-value" id="cl-modal-source">—</div></div></div>
+        <div class="info-item"><i data-lucide="package"></i><div><div class="info-label">Entité</div><div class="info-value" id="cl-modal-entity">—</div></div></div>
+      </div>
+
+      <div>
+        <h3>Détail complet</h3>
+        <div id="cl-modal-message" class="cl-modal-message">—</div>
+      </div>
+
+      <div id="cl-modal-changed-section" class="hidden">
+        <h3>Champs modifiés</h3>
+        <div id="cl-modal-changed" class="tags-list"></div>
+      </div>
+
+      <div id="cl-modal-diff-section" class="hidden">
+        <h3>Diff lisible</h3>
+        <div id="cl-modal-diff" class="cl-diff-list"></div>
+      </div>
+
+      <div id="cl-modal-details-section" class="hidden">
+        <h3>Détails techniques</h3>
+        <pre id="cl-modal-details" class="cl-modal-pre">—</pre>
+      </div>
+
+      <div id="cl-modal-before-section" class="hidden">
+        <h3>État avant</h3>
+        <pre id="cl-modal-before" class="cl-modal-pre">—</pre>
+      </div>
+
+      <div id="cl-modal-after-section" class="hidden">
+        <h3>État après</h3>
+        <pre id="cl-modal-after" class="cl-modal-pre">—</pre>
+      </div>
+
+      <details id="cl-modal-raw-wrap" class="cl-modal-raw">
+        <summary>JSON brut de l'événement</summary>
+        <pre id="cl-modal-raw" class="cl-modal-pre">—</pre>
+      </details>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" id="cl-modal-copy-btn"><i data-lucide="copy"></i> Copier le détail</button>
+      <button class="btn-ghost" id="cl-modal-close-footer">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ STORAGE POOL MODAL ═══════════════════════ -->
+<div id="storage-pool-modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-overlay" id="sp-modal-overlay"></div>
+  <div class="modal-content">
+    <button class="modal-close" id="sp-modal-close"><i data-lucide="x"></i></button>
+
+    <div class="modal-header">
+      <div class="modal-icon" id="sp-modal-icon"><i data-lucide="hard-drive"></i></div>
+      <div class="modal-title-block">
+        <h2 id="sp-modal-title">Détail du pool</h2>
+        <div class="modal-badges">
+          <span id="sp-modal-type" class="badge">—</span>
+          <span id="sp-modal-mode" class="badge">—</span>
+          <span id="sp-modal-state" class="badge">—</span>
+          <span id="sp-modal-enabled" class="badge">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-body">
+      <div class="modal-info-grid">
+        <div class="info-item"><i data-lucide="database"></i><div><div class="info-label">Pool</div><div class="info-value" id="sp-modal-name">—</div></div></div>
+        <div class="info-item"><i data-lucide="pie-chart"></i><div><div class="info-label">Utilisation</div><div class="info-value" id="sp-modal-usage">—</div></div></div>
+        <div class="info-item"><i data-lucide="hard-drive"></i><div><div class="info-label">Capacité totale</div><div class="info-value" id="sp-modal-total">—</div></div></div>
+        <div class="info-item"><i data-lucide="gauge"></i><div><div class="info-label">Espace libre</div><div class="info-value" id="sp-modal-free">—</div></div></div>
+        <div class="info-item"><i data-lucide="folder"></i><div><div class="info-label">Chemin</div><div class="info-value mono" id="sp-modal-path">—</div></div></div>
+        <div class="info-item"><i data-lucide="list-checks"></i><div><div class="info-label">Fonctions</div><div class="info-value" id="sp-modal-functions">—</div></div></div>
+      </div>
+
+      <details class="sp-modal-section" id="sp-modal-maintenance-section" open>
+        <summary>Maintenance</summary>
+        <div class="sp-maintenance-level-wrap">
+          <span class="sp-maintenance-level unknown" id="sp-modal-level">Niveau: inconnu</span>
+          <span class="sp-maintenance-level unknown" id="sp-modal-association-level">Association: inconnue</span>
+        </div>
+        <div id="sp-modal-maintenance" class="cl-modal-message">—</div>
+      </details>
+
+      <details class="sp-modal-section" id="sp-modal-details-section">
+        <summary>Détails techniques</summary>
+        <pre id="sp-modal-details" class="cl-modal-pre">—</pre>
+      </details>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" id="sp-modal-close-footer">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notifications -->
+<div id="toast-container"></div>
+
+<!-- App JS -->
+<script src="/js/app.js"></script>
+</body>
+</html>
