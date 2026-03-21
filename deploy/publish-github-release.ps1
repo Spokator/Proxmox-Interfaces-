@@ -62,7 +62,7 @@ foreach ($asset in $Assets) {
     }
 
     $assetName = [System.IO.Path]::GetFileName($asset)
-    $uri = "$uploadBase?name=$([uri]::EscapeDataString($assetName))"
+    $uri = "${uploadBase}?name=$([uri]::EscapeDataString($assetName))"
 
     Write-Host "[INFO] Uploading $assetName..."
     Invoke-RestMethod -Method POST -Uri $uri -Headers @{
