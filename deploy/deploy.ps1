@@ -5,10 +5,10 @@
 # ===============================================================
 
 param(
-    [string]$ProxmoxHost = "192.168.8.100",
+    [string]$ProxmoxHost = "10.0.0.10",
     [string]$ProxmoxUser = "root",
-    [int]$CTID = 107,
-    [string]$RemoteDir = "/opt/chretieno",
+    [int]$CTID = 190,
+    [string]$RemoteDir = "/opt/proxmox-interfaces",
     [string]$SSHKeyPath = "",
     [switch]$AcceptNewHostKey = $true
 )
@@ -17,13 +17,13 @@ $ErrorActionPreference = "Stop"
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Blue
-Write-Host "  Chretieno.lan - Deploiement (pct push)" -ForegroundColor Blue
+Write-Host "  Proxmox-Interfaces - Deploiement (pct push)" -ForegroundColor Blue
 Write-Host "============================================" -ForegroundColor Blue
 Write-Host ""
 
 $SourceDir = Split-Path -Parent $PSScriptRoot
-$ArchivePath = Join-Path $env:TEMP "chretieno-deploy.tgz"
-$RemoteTmpArchive = "/tmp/chretieno-deploy.tgz"
+$ArchivePath = Join-Path $env:TEMP "proxmox-interfaces-deploy.tgz"
+$RemoteTmpArchive = "/tmp/proxmox-interfaces-deploy.tgz"
 $SshTarget = "$ProxmoxUser@$ProxmoxHost"
 
 foreach ($cmd in @("ssh", "scp", "tar")) {
@@ -94,7 +94,7 @@ if ($result -eq "200") {
     Write-Host "  CT cible     : $CTID" -ForegroundColor Cyan
 } else {
     Write-Host "  Code HTTP: $result" -ForegroundColor Yellow
-    Write-Host "  Logs: ssh $SshTarget 'pct exec $CTID -- journalctl -u chretieno -n 80 --no-pager'" -ForegroundColor Yellow
+    Write-Host "  Logs: ssh $SshTarget 'pct exec $CTID -- journalctl -u proxmox-interfaces -n 80 --no-pager'" -ForegroundColor Yellow
     exit 1
 }
 

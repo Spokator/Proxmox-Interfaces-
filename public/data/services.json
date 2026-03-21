@@ -5,42 +5,21 @@
       "name": "Infrastructure",
       "icon": "server",
       "color": "#22c55e",
-      "description": "Hyperviseur, réseau et services de base de l'infrastructure"
-    },
-    {
-      "id": "ia",
-      "name": "Intelligence Artificielle",
-      "icon": "brain",
-      "color": "#8b5cf6",
-      "description": "Modèles LLM locaux, assistants IA et intégrations intelligentes"
-    },
-    {
-      "id": "creation",
-      "name": "Création & Médias",
-      "icon": "palette",
-      "color": "#ec4899",
-      "description": "Génération d'images, vidéos et contenus créatifs par IA"
-    },
-    {
-      "id": "gestion",
-      "name": "Gestion IT",
-      "icon": "clipboard-list",
-      "color": "#3b82f6",
-      "description": "Tickets ITSM, parc informatique et automatisation des processus"
-    },
-    {
-      "id": "documentation",
-      "name": "Documentation",
-      "icon": "book-open",
-      "color": "#f59e0b",
-      "description": "Wiki et base de connaissances alimentée automatiquement"
+      "description": "Hypervisor, network, and base services"
     },
     {
       "id": "monitoring",
-      "name": "Monitoring & Alertes",
+      "name": "Monitoring",
       "icon": "activity",
       "color": "#ef4444",
-      "description": "Surveillance temps réel, métriques et alertes de l'infrastructure"
+      "description": "Metrics, health checks, and alerting"
+    },
+    {
+      "id": "automation",
+      "name": "Automation",
+      "icon": "git-branch",
+      "color": "#3b82f6",
+      "description": "Workflows and integrations"
     }
   ],
   "services": [
@@ -48,416 +27,52 @@
       "id": "proxmox",
       "name": "Proxmox VE",
       "category": "infrastructure",
-      "description": "Hyperviseur principal gérant l'ensemble de l'infrastructure virtualisée",
-      "longDescription": "Proxmox VE est la plateforme de virtualisation qui héberge tous les conteneurs LXC de l'infrastructure. Elle gère 6 conteneurs actifs (CT 100 à 105) et assure la surveillance des ressources système, la gestion du stockage, les snapshots et la configuration réseau complète.",
-      "url": "https://192.168.8.100:8006",
-      "domain": "https://proxmox.lan:8006",
-      "ip": "192.168.8.100",
+      "description": "Main hypervisor UI",
+      "longDescription": "Core Proxmox endpoint used by Proxmox-Interfaces for inventory and power actions.",
+      "url": "https://proxmox.example.internal:8006",
+      "domain": "https://proxmox.example.internal:8006",
+      "ip": "10.0.0.10",
       "port": 8006,
       "protocol": "https",
       "icon": "server",
-      "tags": ["hyperviseur", "LXC", "virtualisation", "proxmox"],
-      "container": "Hôte physique",
+      "tags": ["proxmox", "hypervisor"],
+      "container": "Host",
       "status": "unknown",
-      "favorite": true,
-      "features": [
-        "Gestion des 6 conteneurs LXC (CT 100-105)",
-        "Surveillance CPU / RAM / Stockage en temps réel",
-        "Snapshots et sauvegardes automatiques",
-        "Gestion réseau, bridges et VLAN",
-        "Migration à chaud des conteneurs"
-      ],
-      "credentials": {
-        "note": "Connexion SSH : ssh root@192.168.8.100",
-        "webui": "https://proxmox.lan:8006 — login root"
-      },
-      "docs": "https://pve.proxmox.com/wiki/Main_Page"
-    },
-    {
-      "id": "dns",
-      "name": "DNS Technitium",
-      "category": "infrastructure",
-      "description": "Serveur DNS interne résolvant tous les domaines .lan de l'infrastructure",
-      "longDescription": "Technitium DNS Server gère la résolution de tous les noms de domaine .lan utilisés dans l'infrastructure. C'est lui qui permet d'accéder aux services par leur nom (proxmox.lan, glpi.lan, ia.lan, etc.) plutôt que par leur adresse IP.",
-      "url": "http://192.168.8.150:5380",
-      "domain": "http://dns.lan",
-      "ip": "192.168.8.150",
-      "port": 5380,
-      "protocol": "http",
-      "icon": "globe",
-      "tags": ["DNS", "réseau", "nommage", "technitium"],
-      "container": "CT 100",
-      "status": "unknown",
-      "favorite": false,
-      "features": [
-        "Résolution DNS locale pour tous les .lan",
-        "Zones DNS personnalisées et gestion des enregistrements",
-        "Cache DNS pour performances améliorées",
-        "Blocklist (ad-blocking DNS)",
-        "Interface d'administration web complète"
-      ],
-      "docs": "https://technitium.com/dns/help.html"
-    },
-    {
-      "id": "ollama",
-      "name": "Ollama",
-      "category": "ia",
-      "description": "Moteur d'exécution de modèles LLM locaux avec accélération GPU",
-      "longDescription": "Ollama permet d'exécuter des modèles de langage (LLM) directement sur l'infrastructure locale sans dépendance cloud. Configuré sur la machine équipée d'un GPU NVIDIA (192.168.8.165), il expose une API compatible OpenAI utilisée par GLPI Fake et d'autres services.",
-      "url": "http://192.168.8.165:3000/",
-      "domain": "http://ia.lan:3000/",
-      "ip": "192.168.8.165",
-      "port": 3000,
-      "protocol": "http",
-      "icon": "cpu",
-      "tags": ["LLM", "IA", "GPU", "local", "OpenAI"],
-      "container": "CT 101",
-      "status": "unknown",
-      "favorite": true,
-      "features": [
-        "Exécution locale de modèles LLM (Llama, Mistral, Deepseek...)",
-        "API REST compatible OpenAI",
-        "Accélération GPU NVIDIA (VRAM monitorée via Grafana)",
-        "Pas de dépendance cloud — données privées garanties",
-        "Chargement/déchargement dynamique des modèles"
-      ],
-      "grafanaDashboard": "http://monitoring.lan/d/Oxed_c6Wz/nvidia-dashboard?orgId=1&from=now-6h&to=now&timezone=browser&var-instance=192.168.8.165:9400&var-gpu=$__all&refresh=auto",
-      "docs": "https://ollama.ai/docs"
-    },
-    {
-      "id": "athena",
-      "name": "Athena IA",
-      "category": "creation",
-      "description": "IA personnalisée développée en interne pour la création d'images et de vidéos",
-      "longDescription": "Athena est une plateforme IA développée spécifiquement pour cette infrastructure. Elle intègre des pipelines de génération d'images haute qualité et de création vidéo, avec une interface intuitive optimisée. S'appuie sur Ollama et ComfyUI en backend.",
-      "url": "http://192.168.8.165:9000",
-      "domain": "http://athena.lan",
-      "ip": "192.168.8.165",
-      "port": 9000,
-      "protocol": "http",
-      "icon": "sparkles",
-      "tags": ["IA", "images", "vidéos", "création", "custom"],
-      "container": "CT 101",
-      "status": "unknown",
-      "favorite": true,
-      "features": [
-        "Génération d'images par IA (texte vers image)",
-        "Création de vidéos automatisée",
-        "Interface personnalisée et intuitive",
-        "Intégration ComfyUI pour workflows avancés",
-        "Développement interne — entièrement personnalisable"
-      ]
-    },
-    {
-      "id": "comfyui",
-      "name": "ComfyUI (Shema)",
-      "category": "creation",
-      "description": "Interface de workflow visuel pour la génération d'images avec Stable Diffusion",
-      "longDescription": "ComfyUI (accessible via shema.lan) est une interface de création d'images par IA basée sur des workflows visuels node-to-node. Elle permet de construire des pipelines complexes de génération avec Stable Diffusion, ControlNet, et d'autres modèles de diffusion.",
-      "url": "http://192.168.8.165:8188",
-      "domain": "http://shema.lan",
-      "ip": "192.168.8.165",
-      "port": 8188,
-      "protocol": "http",
-      "icon": "image",
-      "tags": ["ComfyUI", "Stable Diffusion", "workflow", "images", "ControlNet"],
-      "container": "CT 101",
-      "status": "unknown",
-      "favorite": false,
-      "features": [
-        "Éditeur de workflow visuel node-to-node",
-        "Stable Diffusion XL et autres modèles",
-        "ControlNet pour contrôle précis de la génération",
-        "Batch generation et automatisation",
-        "Intégration native avec Athena"
-      ]
-    },
-    {
-      "id": "dataia",
-      "name": "dataIA",
-      "category": "ia",
-      "description": "IA personnalisée créée en local — actuellement hors ligne",
-      "longDescription": "dataIA est une intelligence artificielle locale créée sur mesure par l'équipe. Elle est hébergée sur CT 102 (192.168.8.102) mais est actuellement éteinte.",
-      "url": "http://192.168.8.102",
-      "domain": "http://192.168.8.102",
-      "ip": "192.168.8.102",
-      "port": 80,
-      "protocol": "http",
-      "icon": "brain",
-      "tags": ["IA", "local", "custom", "hors ligne"],
-      "container": "CT 102",
-      "status": "offline",
-      "favorite": false,
-      "features": [
-        "IA locale entièrement personnalisée",
-        "Hébergée sur CT 102 (192.168.8.102)",
-        "Actuellement hors ligne"
-      ]
-    },
-    {
-      "id": "glpifake",
-      "name": "GLPI Fake + IA",
-      "category": "ia",
-      "description": "Version GLPI personnalisée avec base de données réelle et assistant IA intégré",
-      "longDescription": "GLPI Fake est une version entièrement personnalisée de GLPI intégrant la base de données réelle de production et un assistant IA (via Ollama) capable d'analyser les tickets, suggérer des solutions, identifier des patterns d'incidents et assister les techniciens dans leur travail quotidien.",
-      "url": "http://glpifake.lan",
-      "domain": "http://glpifake.lan",
-      "ip": "192.168.8.165",
-      "port": 80,
-      "protocol": "http",
-      "icon": "bot",
-      "tags": ["GLPI", "IA", "tickets", "assistant", "custom"],
-      "container": "CT 101",
-      "status": "unknown",
-      "favorite": true,
-      "features": [
-        "Connexion directe à la base de données GLPI réelle",
-        "Assistant IA pour l'analyse et la résolution de tickets",
-        "Suggestions automatiques de solutions",
-        "Détection de patterns d'incidents récurrents",
-        "Interface enrichie par rapport au GLPI standard"
-      ]
-    },
-    {
-      "id": "glpi",
-      "name": "GLPI",
-      "category": "gestion",
-      "description": "Système officiel de gestion des tickets et du parc informatique",
-      "longDescription": "GLPI (Gestionnaire Libre de Parc Informatique) est la plateforme ITSM principale de gestion. Elle gère les tickets d'incidents, les demandes de service, l'inventaire du parc informatique, et s'intègre avec n8n pour l'automatisation des workflows de résolution.",
-      "url": "http://192.168.8.103:8081/front/central.php",
-      "domain": "http://glpi.lan/front/central.php",
-      "ip": "192.168.8.103",
-      "port": 8081,
-      "protocol": "http",
-      "icon": "ticket",
-      "tags": ["GLPI", "ITSM", "tickets", "inventaire", "parc"],
-      "container": "CT 103",
-      "status": "unknown",
-      "favorite": true,
-      "features": [
-        "Gestion complète des incidents et demandes",
-        "Inventaire automatique du parc matériel et logiciel",
-        "Workflows de résolution automatisés via n8n",
-        "Base de connaissances intégrée",
-        "Rapports et statistiques ITSM",
-        "Intégration avec le wiki via n8n"
-      ],
-      "docs": "https://glpi-project.org/fr/documentation/"
-    },
-    {
-      "id": "n8n",
-      "name": "n8n",
-      "category": "gestion",
-      "description": "Plateforme d'automatisation de workflows — hub d'intégration de tous les services",
-      "longDescription": "n8n est le moteur d'automatisation qui connecte et orchestre tous les services de l'infrastructure. Il gère les workflows GLPI (notifications, escalades), alimente le wiki automatiquement depuis les données GLPI, déclenche des actions IA, et bien plus encore.",
-      "url": "http://192.168.8.103:5678",
-      "domain": "http://n8n.lan",
-      "ip": "192.168.8.103",
-      "port": 5678,
-      "protocol": "http",
-      "icon": "git-branch",
-      "tags": ["n8n", "automation", "workflow", "intégration", "no-code"],
-      "container": "CT 103",
-      "status": "unknown",
-      "favorite": true,
-      "features": [
-        "Automatisation des workflows GLPI (notifications, SLA)",
-        "Alimentation automatique du wiki depuis GLPI",
-        "Intégration avec Ollama pour traitement IA",
-        "Webhooks entrants et sortants",
-        "Planifications et déclencheurs",
-        "300+ intégrations disponibles"
-      ],
-      "docs": "https://docs.n8n.io/"
-    },
-    {
-      "id": "wiki",
-      "name": "Wiki",
-      "category": "documentation",
-      "description": "Base de connaissances interne alimentée automatiquement par n8n et GLPI",
-      "longDescription": "Le wiki interne est le référentiel de toute la documentation technique de l'infrastructure. Il est alimenté automatiquement par des workflows n8n à partir des données GLPI (résolutions de tickets, procédures) et peut être enrichi manuellement. Il centralise les guides, procédures et connaissances de l'équipe.",
-      "url": "http://192.168.8.103:3000/en/lessons/index",
-      "domain": "http://wiki.lan/en/lessons/index",
-      "ip": "192.168.8.103",
-      "port": 3000,
-      "protocol": "http",
-      "icon": "book-open",
-      "tags": ["wiki", "documentation", "knowledge base", "procédures"],
-      "container": "CT 103",
-      "status": "unknown",
-      "favorite": false,
-      "features": [
-        "Documentation auto-générée depuis les tickets GLPI résolus",
-        "Alimentation automatique via workflows n8n",
-        "Recherche full-text dans toute la base",
-        "Catégorisation par service et technologie",
-        "Historique des modifications"
-      ]
+      "favorite": true
     },
     {
       "id": "grafana",
       "name": "Grafana",
       "category": "monitoring",
-      "description": "Dashboards de monitoring Proxmox et GPU NVIDIA en temps réel",
-      "longDescription": "Grafana est la plateforme de visualisation connectée à Prometheus pour afficher les métriques en temps réel de l'infrastructure. Deux dashboards principaux sont actifs : le monitoring complet de Proxmox VE et le suivi de la VRAM GPU NVIDIA utilisée par Ollama.",
-      "url": "http://192.168.8.180:3000",
-      "domain": "http://monitoring.lan",
-      "ip": "192.168.8.180",
+      "description": "Monitoring dashboard",
+      "longDescription": "Grafana dashboards for infrastructure and application metrics.",
+      "url": "http://grafana.example.internal:3000",
+      "domain": "http://grafana.example.internal",
+      "ip": "10.0.0.20",
       "port": 3000,
       "protocol": "http",
       "icon": "bar-chart-2",
-      "tags": ["grafana", "monitoring", "dashboards", "métriques", "visualisation"],
-      "container": "CT 105",
+      "tags": ["monitoring", "grafana"],
+      "container": "CT 200",
       "status": "unknown",
-      "favorite": true,
-      "features": [
-        "Dashboard Proxmox VE (CPU, RAM, disque, réseau — refresh 10s)",
-        "Dashboard NVIDIA GPU (VRAM, température, utilisation — Ollama)",
-        "Alertes configurables via Grafana Alerting",
-        "Rétention des métriques historiques",
-        "Visualisations personnalisables"
-      ],
-      "dashboards": [
-        {
-          "name": "Proxmox via Prometheus",
-          "url": "http://monitoring.lan/d/Dp7Cd57Zza/proxmox-via-prometheus?orgId=1&from=now-6h&to=now&timezone=browser&var-instance=192.168.8.100&refresh=10s",
-          "icon": "server"
-        },
-        {
-          "name": "NVIDIA GPU (Ollama)",
-          "url": "http://monitoring.lan/d/Oxed_c6Wz/nvidia-dashboard?orgId=1&from=now-6h&to=now&timezone=browser&var-instance=192.168.8.165:9400&var-gpu=$__all&refresh=auto",
-          "icon": "cpu"
-        }
-      ]
+      "favorite": false
     },
     {
-      "id": "prometheus",
-      "name": "Prometheus",
-      "category": "monitoring",
-      "description": "Collecteur de métriques avec 3 endpoints actifs (pve-exporter + GPU)",
-      "longDescription": "Prometheus est le moteur de collecte de métriques de l'infrastructure. Il scrape les données depuis 3 endpoints configurés : pve-exporter pour Proxmox, l'exporter NVIDIA pour les métriques GPU, et d'autres exporters système. Il alimente Grafana avec des données fraîches.",
-      "url": "http://192.168.8.180:9090/targets",
-      "domain": "http://monitoring.lan:9090/targets",
-      "ip": "192.168.8.180",
-      "port": 9090,
+      "id": "automation",
+      "name": "Automation",
+      "category": "automation",
+      "description": "Workflow engine",
+      "longDescription": "Automation endpoint for orchestrating internal workflows.",
+      "url": "http://automation.example.internal:5678",
+      "domain": "http://automation.example.internal",
+      "ip": "10.0.0.30",
+      "port": 5678,
       "protocol": "http",
-      "icon": "database",
-      "tags": ["prometheus", "métriques", "monitoring", "scraping", "pve-exporter"],
-      "container": "CT 105",
+      "icon": "git-branch",
+      "tags": ["workflow", "automation"],
+      "container": "CT 201",
       "status": "unknown",
-      "favorite": false,
-      "features": [
-        "3 endpoints actifs (pve-exporter, NVIDIA, node-exporter)",
-        "Scraping configurable par intervalle",
-        "PromQL pour requêtes avancées",
-        "Alertmanager intégrable",
-        "Données source pour Grafana"
-      ],
-      "docs": "https://prometheus.io/docs/"
-    },
-    {
-      "id": "uptime-kuma",
-      "name": "Uptime Kuma",
-      "category": "monitoring",
-      "description": "Surveillance de disponibilité de tous les services avec alertes Discord",
-      "longDescription": "Uptime Kuma surveille en permanence la disponibilité de tous les services, machines et ports de l'infrastructure. En cas d'indisponibilité, il envoie immédiatement une alerte sur Discord avec les détails. Toutes les IPs, ports et services sont monitorés.",
-      "url": "http://192.168.8.189:3001/dashboard",
-      "domain": "http://alerte.lan/dashboard",
-      "ip": "192.168.8.189",
-      "port": 3001,
-      "protocol": "http",
-      "icon": "bell",
-      "tags": ["uptime", "alertes", "discord", "surveillance", "monitoring"],
-      "container": "CT 104",
-      "status": "unknown",
-      "favorite": false,
-      "features": [
-        "Surveillance de tous les services (HTTP, TCP, ping)",
-        "Alertes Discord en temps réel",
-        "Historique de disponibilité et graphiques",
-        "Page de statut publique (facultatif)",
-        "Certificats SSL et expiration monitorés",
-        "Vérifications toutes les 60 secondes"
-      ]
+      "favorite": false
     }
-  ],
-  "containers": [
-    {
-      "id": "ct100",
-      "name": "CT 100",
-      "ip": "192.168.8.150",
-      "os": "Debian 12",
-      "description": "DNS Technitium — Services réseau",
-      "color": "#22c55e",
-      "services": ["dns"],
-      "resources": { "cpu": 1, "ram": "512 MB", "disk": "8 GB" }
-    },
-    {
-      "id": "ct101",
-      "name": "CT 101",
-      "ip": "192.168.8.165",
-      "os": "Ubuntu 22.04",
-      "description": "IA & Création — Ollama, Athena, ComfyUI, GLPI Fake (GPU NVIDIA)",
-      "color": "#8b5cf6",
-      "services": ["ollama", "athena", "comfyui", "glpifake"],
-      "resources": { "cpu": 8, "ram": "16 GB", "disk": "100 GB", "gpu": "NVIDIA (passthrough)" }
-    },
-    {
-      "id": "ct102",
-      "name": "CT 102",
-      "ip": "192.168.8.102",
-      "os": "—",
-      "description": "dataIA — IA locale personnalisée (hors ligne)",
-      "color": "#64748b",
-      "services": ["dataia"],
-      "resources": { "cpu": 2, "ram": "4 GB", "disk": "20 GB" }
-    },
-    {
-      "id": "ct103",
-      "name": "CT 103",
-      "ip": "192.168.8.103",
-      "os": "Debian 12",
-      "description": "datia-n8n — GLPI, n8n, Wiki",
-      "color": "#3b82f6",
-      "services": ["glpi", "n8n", "wiki"],
-      "resources": { "cpu": 4, "ram": "4 GB", "disk": "50 GB" }
-    },
-    {
-      "id": "ct104",
-      "name": "CT 104",
-      "ip": "192.168.8.189",
-      "os": "Debian 12",
-      "description": "alerte.lan — Uptime Kuma",
-      "color": "#f59e0b",
-      "services": ["uptime-kuma"],
-      "resources": { "cpu": 1, "ram": "512 MB", "disk": "8 GB" }
-    },
-    {
-      "id": "ct105",
-      "name": "CT 105",
-      "ip": "192.168.8.180",
-      "os": "Debian 12",
-      "description": "Monitoring — Grafana + Prometheus",
-      "color": "#ef4444",
-      "services": ["grafana", "prometheus"],
-      "resources": { "cpu": 2, "ram": "2 GB", "disk": "20 GB" }
-    },
-    {
-      "id": "ct107",
-      "name": "CT 107",
-      "ip": "192.168.8.107",
-      "os": "Debian 13",
-      "description": "Chretieno.lan — Intranet centralisé (ce site)",
-      "color": "#6366f1",
-      "services": ["intranet"],
-      "resources": { "cpu": 1, "ram": "512 MB", "disk": "10 GB" }
-    }
-  ],
-  "network": {
-    "subnet": "192.168.8.0/24",
-    "gateway": "192.168.8.1",
-    "proxmoxHost": "192.168.8.100",
-    "dns": "192.168.8.150",
-    "domain": ".lan"
-  }
+  ]
 }

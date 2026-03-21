@@ -1,16 +1,17 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════
 #  install.sh
-#  Installation de Chretieno.lan sur le conteneur CT 107
-#  Usage : bash /opt/chretieno/deploy/install.sh
+#  Installation de Proxmox-Interfaces dans un conteneur LXC
+#  Usage : bash /opt/proxmox-interfaces/deploy/install.sh
 # ═══════════════════════════════════════════════════════════════
 
 set -e
 
-APP_DIR="/opt/chretieno"
-APP_USER="chretieno"
+APP_DIR="/opt/proxmox-interfaces"
+APP_USER="proxmox-interfaces"
 APP_PORT=3000
-DOMAIN="chretieno.lan"
+DOMAIN="proxmox-interfaces.local"
+SERVICE_NAME="proxmox-interfaces"
 
 GREEN='\033[0;32m'; BLUE='\033[0;34m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
@@ -18,7 +19,7 @@ success() { echo -e "${GREEN}[OK]${NC} $1"; }
 step()    { echo -e "\n${BLUE}>>> $1${NC}"; }
 
 echo -e "\n${BLUE}╔══════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║  Chretieno.lan — Installation            ║${NC}"
+echo -e "${BLUE}║  Proxmox-Interfaces — Installation       ║${NC}"
 echo -e "${BLUE}╚══════════════════════════════════════════╝${NC}\n"
 
 [ "$(id -u)" -ne 0 ] && { echo "Exécuter en root."; exit 1; }
@@ -70,13 +71,13 @@ success "Dossiers de données créés"
 step "Configuration du service systemd"
 # Préserver les variables PVE existantes si déjà présentes dans l'unité
 EXISTING_PVE_ENV=""
-if [ -f /etc/systemd/system/chretieno.service ]; then
-  EXISTING_PVE_ENV=$(grep -E '^Environment=PVE_(HOST|PORT|TOKEN_ID|TOKEN_SECRET)=' /etc/systemd/system/chretieno.service || true)
+if [ -f /etc/systemd/system/${SERVICE_NAME}.service ]; then
+  EXISTING_PVE_ENV=$(grep -E '^Environment=PVE_(HOST|PORT|TOKEN_ID|TOKEN_SECRET)=' /etc/systemd/system/${SERVICE_NAME}.service || true)
 fi
 
-cat > /etc/systemd/system/chretieno.service << EOF
+cat > /etc/systemd/system/${SERVICE_NAME}.service << EOF
 [Unit]
-Description=Chretieno.lan Intranet
+Description=Proxmox-Interfaces
 After=network.target
 
 [Service]
@@ -92,27 +93,27 @@ EnvironmentFile=-${APP_DIR}/.env
 ${EXISTING_PVE_ENV}
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=chretieno
+SyslogIdentifier=${SERVICE_NAME}
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl enable chretieno
-systemctl start chretieno
+systemctl enable ${SERVICE_NAME}
+systemctl start ${SERVICE_NAME}
 sleep 2
-systemctl is-active chretieno && success "Service chretieno démarré" || { echo "Erreur démarrage service"; journalctl -u chretieno -n 20; exit 1; }
+systemctl is-active ${SERVICE_NAME} && success "Service ${SERVICE_NAME} demarre" || { echo "Erreur demarrage service"; journalctl -u ${SERVICE_NAME} -n 20; exit 1; }
 
 # ─── Configuration Nginx (reverse proxy) ─────────────────────
 step "Configuration Nginx"
-cat > /etc/nginx/sites-available/chretieno << EOF
+cat > /etc/nginx/sites-available/${SERVICE_NAME} << EOF
 server {
     listen 80 default_server;
     server_name ${DOMAIN} _;
 
-    access_log /var/log/nginx/chretieno_access.log;
-    error_log  /var/log/nginx/chretieno_error.log;
+    access_log /var/log/nginx/${SERVICE_NAME}_access.log;
+    error_log  /var/log/nginx/${SERVICE_NAME}_error.log;
 
     # Compression
     gzip on;
@@ -140,7 +141,7 @@ server {
 }
 EOF
 
-ln -sf /etc/nginx/sites-available/chretieno /etc/nginx/sites-enabled/chretieno
+ln -sf /etc/nginx/sites-available/${SERVICE_NAME} /etc/nginx/sites-enabled/${SERVICE_NAME}
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl enable nginx && systemctl restart nginx
 success "Nginx configuré et démarré"
@@ -168,18 +169,18 @@ fi
 # ─── Résumé ───────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}╔══════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║  🎉 Chretieno.lan installé avec succès !          ║${NC}"
+echo -e "${GREEN}║  🎉 Proxmox-Interfaces installe avec succes !     ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "  Accès local  : ${BLUE}http://$(hostname -I | awk '{print $1}')${NC}"
 echo -e "  Domaine .lan : ${BLUE}http://${DOMAIN}${NC} (après config DNS)"
 echo ""
 echo -e "${YELLOW}  Prochaine étape — Ajouter le DNS dans Technitium :${NC}"
-echo -e "  Allez sur http://dns.lan → Zones → chretieno.lan"
-echo -e "  Ajoutez un enregistrement A : chretieno.lan → $(hostname -I | awk '{print $1}')"
+echo -e "  Allez sur votre DNS interne → zones"
+echo -e "  Ajoutez un enregistrement A pour ${DOMAIN} → $(hostname -I | awk '{print $1}')"
 echo ""
 echo -e "  Commandes utiles :"
-echo -e "    systemctl status chretieno    # Statut de l'app"
-echo -e "    journalctl -u chretieno -f    # Logs en temps réel"
-echo -e "    systemctl restart chretieno   # Redémarrer"
+echo -e "    systemctl status ${SERVICE_NAME}    # Statut de l'app"
+echo -e "    journalctl -u ${SERVICE_NAME} -f    # Logs en temps reel"
+echo -e "    systemctl restart ${SERVICE_NAME}   # Redemarrer"
 echo ""

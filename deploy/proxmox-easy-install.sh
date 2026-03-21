@@ -5,7 +5,7 @@
 set -euo pipefail
 
 CT_ID="${CT_ID:-190}"
-CT_NAME="${CT_NAME:-chretieno-intranet}"
+CT_NAME="${CT_NAME:-proxmox-interfaces}"
 CT_STORAGE="${CT_STORAGE:-local-lvm}"
 TEMPLATE_STORAGE="${TEMPLATE_STORAGE:-local}"
 TEMPLATE="${TEMPLATE:-debian-12-standard_12.7-1_amd64.tar.zst}"
@@ -18,7 +18,7 @@ CT_IP_CIDR="${CT_IP_CIDR:-dhcp}"
 CT_GATEWAY="${CT_GATEWAY:-}"
 CT_DNS="${CT_DNS:-1.1.1.1}"
 CT_PASSWORD="${CT_PASSWORD:-}"
-APP_DIR="${APP_DIR:-/opt/chretieno}"
+APP_DIR="${APP_DIR:-/opt/proxmox-interfaces}"
 SOURCE_DIR="${SOURCE_DIR:-}"
 START_NOW="${START_NOW:-1}"
 INSTALL_NOW="${INSTALL_NOW:-1}"
@@ -30,7 +30,7 @@ Usage:
 
 Options:
   --ctid <id>                 Container ID (default: 190)
-  --name <name>               Hostname (default: chretieno-intranet)
+  --name <name>               Hostname (default: proxmox-interfaces)
   --storage <storage>         Rootfs storage (default: local-lvm)
   --template-storage <store>  Template storage (default: local)
   --bridge <bridge>           Network bridge (default: vmbr0)
@@ -48,8 +48,8 @@ Options:
   -h, --help                  Show this help
 
 Examples:
-  bash proxmox-easy-install.sh --ctid 190 --ip 192.168.8.190/24 --gw 192.168.8.1 --dns 192.168.8.150 --source /root/Chretieno.lan
-  CT_ID=190 CT_IP_CIDR=dhcp SOURCE_DIR=/root/Chretieno.lan bash proxmox-easy-install.sh
+  bash proxmox-easy-install.sh --ctid 190 --ip 10.0.0.190/24 --gw 10.0.0.1 --dns 10.0.0.53 --source /root/Proxmox-Interfaces
+  CT_ID=190 CT_IP_CIDR=dhcp SOURCE_DIR=/root/Proxmox-Interfaces bash proxmox-easy-install.sh
 EOF
 }
 
