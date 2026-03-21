@@ -34,6 +34,21 @@ curl -fsSL https://YOUR-PUBLIC-BOOTSTRAP/proxmox-interfaces-bootstrap.sh | bash 
 curl -fsSL https://YOUR-PUBLIC-BOOTSTRAP/proxmox-interfaces-bootstrap.sh | bash
 ```
 
+### First-run configuration (inside installed instance)
+
+After deployment, run the guided environment wizard:
+
+```bash
+bash /opt/proxmox-interfaces/deploy/configure-instance.sh
+```
+
+Useful runtime commands:
+
+```bash
+bash /opt/proxmox-interfaces/deploy/diagnose.sh
+bash /opt/proxmox-interfaces/deploy/support-bundle.sh
+```
+
 ## Build private artifacts
 
 Run on Linux from repository root:
@@ -69,4 +84,7 @@ docker compose up -d --build
 - `deploy/proxmox-interfaces-bootstrap.sh`: production bootstrap entrypoint
 - `deploy/proxmox-easy-install.sh`: LXC installer
 - `deploy/proxmox-interfaces-release.sh`: artifact packager
+- `deploy/configure-instance.sh`: first-run `.env` wizard
+- `deploy/diagnose.sh`: quick runtime diagnostics
+- `deploy/support-bundle.sh`: support bundle export
 - `PROXMOX_INTERFACES_DISTRIBUTION.md`: private distribution model

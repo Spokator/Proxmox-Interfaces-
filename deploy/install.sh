@@ -56,7 +56,11 @@ chown -R "$APP_USER":"$APP_USER" "$APP_DIR"
 # ─── Installation des dépendances Node.js ────────────────────
 step "Installation des dépendances npm"
 cd "$APP_DIR"
-npm install --production
+if [ -f "$APP_DIR/package-lock.json" ]; then
+  npm ci --omit=dev
+else
+  npm install --production
+fi
 success "Dépendances installées"
 
 # ─── Création des dossiers de données ────────────────────────
@@ -91,6 +95,16 @@ Environment=NODE_ENV=production
 Environment=PORT=${APP_PORT}
 EnvironmentFile=-${APP_DIR}/.env
 ${EXISTING_PVE_ENV}
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ReadWritePaths=${APP_DIR} ${APP_DIR}/data
+UMask=027
+LimitNOFILE=65535
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=${SERVICE_NAME}
@@ -156,6 +170,11 @@ ufw allow 80/tcp    # HTTP (Nginx)
 ufw --force enable
 success "Pare-feu configuré"
 
+# ─── Outils d'exploitation ────────────────────────────────────
+step "Activation des scripts d'exploitation"
+chmod +x "$APP_DIR/deploy/diagnose.sh" "$APP_DIR/deploy/support-bundle.sh" "$APP_DIR/deploy/configure-instance.sh" 2>/dev/null || true
+success "Scripts d'exploitation prêts"
+
 # ─── Test final ───────────────────────────────────────────────
 step "Test de l'application"
 sleep 2
@@ -183,4 +202,7 @@ echo -e "  Commandes utiles :"
 echo -e "    systemctl status ${SERVICE_NAME}    # Statut de l'app"
 echo -e "    journalctl -u ${SERVICE_NAME} -f    # Logs en temps reel"
 echo -e "    systemctl restart ${SERVICE_NAME}   # Redemarrer"
+echo -e "    bash ${APP_DIR}/deploy/diagnose.sh # Diagnostic rapide"
+echo -e "    bash ${APP_DIR}/deploy/support-bundle.sh # Bundle support"
+echo -e "    bash ${APP_DIR}/deploy/configure-instance.sh # Wizard .env"
 echo ""
