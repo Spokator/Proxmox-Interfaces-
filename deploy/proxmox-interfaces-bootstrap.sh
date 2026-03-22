@@ -16,6 +16,8 @@ SILENT="0"
 AUTO_YES="0"
 SKIP_CHECKS="0"
 LOG_FILE=""
+INTERACTIVE_MODE="0"
+TTY_DEVICE=""
 
 pass_args=()
 TMP_DIR=""
@@ -92,7 +94,11 @@ prompt_default() {
   local label="$1"
   local default="$2"
   local out
-  read -r -p "$label [$default]: " out
+  if [[ -n "$TTY_DEVICE" ]]; then
+    read -r -p "$label [$default]: " out < "$TTY_DEVICE"
+  else
+    out=""
+  fi
   [[ -z "$out" ]] && echo "$default" || echo "$out"
 }
 
@@ -138,6 +144,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Keep interactive prompts available even when script is piped through bash.
+if [[ -r /dev/tty && -w /dev/tty ]]; then
+  INTERACTIVE_MODE="1"
+  TTY_DEVICE="/dev/tty"
+fi
+
 if [[ -z "$LOG_FILE" ]]; then
   LOG_FILE="/tmp/proxmox-interfaces-$(date +%Y%m%d-%H%M%S).log"
 fi
@@ -148,11 +160,11 @@ if [[ "$(id -u)" != "0" ]]; then
   exit 1
 fi
 
-if [[ "$AUTO_YES" != "1" && -t 0 && -t 1 ]]; then
+if [[ "$AUTO_YES" != "1" && "$INTERACTIVE_MODE" == "1" ]]; then
   info "Interactive mode enabled."
 
   if [[ -z "$WORKDIR" && -z "$ARTIFACT_URL" ]]; then
-    read -r -p "Use local source directory already on host? (y/N): " ans
+    read -r -p "Use local source directory already on host? (y/N): " ans < "$TTY_DEVICE"
     if [[ "${ans,,}" == "y" || "${ans,,}" == "yes" ]]; then
       WORKDIR="$(prompt_default "Project directory" "/root/Proxmox-Interfaces")"
     else
@@ -244,7 +256,7 @@ fi
 INSTALLER="$PROJECT_DIR/$INSTALLER_REL_PATH"
 [[ -f "$INSTALLER" ]] || { err "Installer missing: $INSTALLER"; exit 1; }
 
-if [[ "$AUTO_YES" != "1" && -t 0 && -t 1 ]]; then
+if [[ "$AUTO_YES" != "1" && "$INTERACTIVE_MODE" == "1" ]]; then
   echo ""
   echo "========== Proxmox-Interfaces =========="
   echo "Project dir : $PROJECT_DIR"
@@ -252,7 +264,7 @@ if [[ "$AUTO_YES" != "1" && -t 0 && -t 1 ]]; then
   echo "Log file    : $LOG_FILE"
   echo "Args        : ${pass_args[*]}"
   echo "========================================"
-  read -r -p "Continue installation? (y/N): " go
+  read -r -p "Continue installation? (y/N): " go < "$TTY_DEVICE"
   if [[ "${go,,}" != "y" && "${go,,}" != "yes" ]]; then
     warn "Installation aborted by user."
     exit 0
