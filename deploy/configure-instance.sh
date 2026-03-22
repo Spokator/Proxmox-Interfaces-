@@ -73,7 +73,7 @@ EOF
       exit 0
       ;;
     *)
-      err "Unknown option: $1"
+      echo "[ERR] Unknown option: $1" >&2
       exit 1
       ;;
   esac

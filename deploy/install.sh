@@ -16,6 +16,7 @@ INSTALL_SYSTEM_UPGRADE="${INSTALL_SYSTEM_UPGRADE:-0}"
 MANAGE_UFW="${MANAGE_UFW:-0}"
 POST_INSTALL_WIZARD="${POST_INSTALL_WIZARD:-auto}"
 POST_INSTALL_PROFILE="${POST_INSTALL_PROFILE:-auto}"
+POST_INSTALL_PLATFORM_SETUP="${POST_INSTALL_PLATFORM_SETUP:-auto}"
 
 GREEN='\033[0;32m'; BLUE='\033[0;34m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
@@ -138,6 +139,75 @@ run_post_install_wizard() {
     bash "$wizard_script" --mode "$profile"
   else
     info "Wizard post-install ignoré par l'utilisateur"
+  fi
+}
+
+run_post_install_platform_setup() {
+  local setup_script="$APP_DIR/deploy/setup-platform.sh"
+  local mode
+  local profile
+
+  mode=$(echo "$POST_INSTALL_PLATFORM_SETUP" | tr '[:upper:]' '[:lower:]')
+  profile=$(echo "$POST_INSTALL_PROFILE" | tr '[:upper:]' '[:lower:]')
+
+  if [ "$profile" != "manual" ] && [ "$profile" != "manuel" ] && [ "$profile" != "auto" ] && [ "$profile" != "automatique" ]; then
+    profile="auto"
+  fi
+  if [ "$profile" = "manuel" ]; then
+    profile="manual"
+  fi
+  if [ "$profile" = "automatique" ]; then
+    profile="auto"
+  fi
+
+  if [ ! -x "$setup_script" ]; then
+    info "Setup plateforme non disponible: $setup_script"
+    return 0
+  fi
+
+  if [ "$mode" = "0" ] || [ "$mode" = "false" ] || [ "$mode" = "no" ] || [ "$mode" = "off" ]; then
+    info "Setup plateforme désactivé (POST_INSTALL_PLATFORM_SETUP=$POST_INSTALL_PLATFORM_SETUP)"
+    return 0
+  fi
+
+  if [ "$mode" = "1" ] || [ "$mode" = "true" ] || [ "$mode" = "yes" ] || [ "$mode" = "on" ]; then
+    step "Setup plateforme complet"
+    bash "$setup_script" --mode "$profile"
+    return 0
+  fi
+
+  if [ ! -t 0 ] && [ ! -r /dev/tty ]; then
+    info "Session non interactive: setup plateforme ignoré (POST_INSTALL_PLATFORM_SETUP=auto)"
+    return 0
+  fi
+
+  step "Setup plateforme complet"
+  echo -e "${YELLOW}[INFO]${NC} Lancer le setup complet (core + options monitoring) ? [y/N]"
+  local answer=""
+  if [ -r /dev/tty ]; then
+    read -r answer < /dev/tty || true
+  else
+    read -r answer || true
+  fi
+  answer=$(echo "$answer" | tr '[:upper:]' '[:lower:]')
+
+  if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "o" ] || [ "$answer" = "oui" ]; then
+    echo -e "${YELLOW}[INFO]${NC} Mode setup plateforme : [A]utomatique (recommandé) / [M]anuel"
+    local mode_answer=""
+    if [ -r /dev/tty ]; then
+      read -r mode_answer < /dev/tty || true
+    else
+      read -r mode_answer || true
+    fi
+    mode_answer=$(echo "$mode_answer" | tr '[:upper:]' '[:lower:]')
+    if [ "$mode_answer" = "m" ] || [ "$mode_answer" = "manual" ] || [ "$mode_answer" = "manuel" ]; then
+      profile="manual"
+    else
+      profile="auto"
+    fi
+    bash "$setup_script" --mode "$profile"
+  else
+    info "Setup plateforme ignoré par l'utilisateur"
   fi
 }
 
@@ -340,7 +410,8 @@ fi
 
 # ─── Outils d'exploitation ────────────────────────────────────
 step "Activation des scripts d'exploitation"
-chmod +x "$APP_DIR/deploy/diagnose.sh" "$APP_DIR/deploy/support-bundle.sh" "$APP_DIR/deploy/configure-instance.sh" 2>/dev/null || true
+chmod +x "$APP_DIR/deploy/diagnose.sh" "$APP_DIR/deploy/support-bundle.sh" "$APP_DIR/deploy/configure-instance.sh" "$APP_DIR/deploy/setup-platform.sh" 2>/dev/null || true
+chmod +x "$APP_DIR/scripts/install-smartctl-exporter.sh" "$APP_DIR/scripts/configure-prometheus-smartctl.sh" 2>/dev/null || true
 success "Scripts d'exploitation prêts"
 
 # ─── Test final ───────────────────────────────────────────────
@@ -373,6 +444,7 @@ echo -e "    systemctl restart ${SERVICE_NAME}   # Redemarrer"
 echo -e "    bash ${APP_DIR}/deploy/diagnose.sh # Diagnostic rapide"
 echo -e "    bash ${APP_DIR}/deploy/support-bundle.sh # Bundle support"
 echo -e "    bash ${APP_DIR}/deploy/configure-instance.sh # Wizard .env"
+echo -e "    bash ${APP_DIR}/deploy/setup-platform.sh # Setup complet (auto/manuel)"
 if ! is_runtime_configured; then
   echo ""
   echo -e "${YELLOW}[INFO]${NC} Inventaire live Proxmox non configuré (.env incomplet)."
@@ -382,3 +454,4 @@ fi
 echo ""
 
 run_post_install_wizard
+run_post_install_platform_setup
