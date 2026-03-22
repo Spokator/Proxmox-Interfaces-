@@ -179,6 +179,18 @@ $env:GITHUB_TOKEN = "<admin-token>"
 ./deploy/set-branch-protection.ps1 -Repo "Spokator/Proxmox-Interfaces-" -Branch "main"
 ```
 
+Dry-run verification:
+
+```powershell
+./deploy/set-branch-protection.ps1 -Repo "Spokator/Proxmox-Interfaces-" -Branch "main" -CheckOnly
+```
+
+Default required checks configured by the script:
+- `test`
+- `npm-audit`
+- `Analyze`
+
 Notes:
 - The token must have repository admin rights to configure branch protection.
+- For fine-grained PAT, repository permission `Administration: Read and write` is required.
 - If your token is read/write only (without admin scope), GitHub API returns 403.
