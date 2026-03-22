@@ -68,12 +68,14 @@ bash /opt/proxmox-interfaces/deploy/support-bundle.sh
 
 Important:
 - run `configure-instance.sh` right after install to set `PVE_HOST`, `PVE_TOKEN_ID`, and `PVE_TOKEN_SECRET`.
+- `PVE_TOKEN_ID` must be in token format `user@realm!tokenname` (example: `api-user@pve!proxmox-interfaces`).
 - without this step, the web UI starts correctly but live Proxmox inventory and auto-discovered services remain empty.
 - at the end of `deploy/install.sh`, an interactive prompt can launch this wizard automatically.
 - for automation, control this behavior with `POST_INSTALL_WIZARD=auto|true|false` (default: `auto`).
 - the wizard now validates Proxmox credentials against the API before restarting the service (with explicit confirmation required to skip).
 - the wizard now supports two profiles: `--mode auto` (recommended defaults + validation) and `--mode manual` (full field-by-field input).
 - you can preselect post-install profile with `POST_INSTALL_PROFILE=auto|manual` (default: `auto`).
+- DNS setup in the wizard is provider-based (`none|technitium|custom`) so environments without Technitium can still be configured cleanly.
 - a full setup orchestrator is available with `deploy/setup-platform.sh` (core config + optional monitoring stack hooks).
 - control full setup prompt with `POST_INSTALL_PLATFORM_SETUP=auto|true|false` (default: `auto`).
 
