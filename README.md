@@ -166,7 +166,11 @@ Dependency review note:
 
 - Technical architecture overview: `docs/ARCHITECTURE.md`
 
-## 11) Main branch protection
+## 11) Maintenance checklist
+
+- Operational maintenance checklist: `docs/MAINTENANCE_CHECKLIST.md`
+
+## 12) Main branch protection
 
 This repository should keep `main` protected.
 
