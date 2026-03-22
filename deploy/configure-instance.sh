@@ -6,6 +6,78 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-/opt/proxmox-interfaces}"
 ENV_FILE="$APP_DIR/.env"
 SERVICE_NAME="proxmox-interfaces"
+CONFIG_MODE="${CONFIG_MODE:-manual}"
+NON_INTERACTIVE="${NON_INTERACTIVE:-0}"
+
+PRESET_PORT=""
+PRESET_PVE_HOST=""
+PRESET_PVE_PORT=""
+PRESET_PVE_TOKEN_ID=""
+PRESET_PVE_TOKEN_SECRET=""
+PRESET_TECHNITIUM_BASE_URL=""
+PRESET_TECHNITIUM_ZONE_SUFFIX=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --mode)
+      CONFIG_MODE="$2"
+      shift 2
+      ;;
+    --non-interactive)
+      NON_INTERACTIVE="1"
+      shift
+      ;;
+    --pve-host)
+      PRESET_PVE_HOST="$2"
+      shift 2
+      ;;
+    --pve-port)
+      PRESET_PVE_PORT="$2"
+      shift 2
+      ;;
+    --pve-token-id)
+      PRESET_PVE_TOKEN_ID="$2"
+      shift 2
+      ;;
+    --pve-token-secret)
+      PRESET_PVE_TOKEN_SECRET="$2"
+      shift 2
+      ;;
+    --technitium-base-url)
+      PRESET_TECHNITIUM_BASE_URL="$2"
+      shift 2
+      ;;
+    --technitium-zone-suffix)
+      PRESET_TECHNITIUM_ZONE_SUFFIX="$2"
+      shift 2
+      ;;
+    --port)
+      PRESET_PORT="$2"
+      shift 2
+      ;;
+    -h|--help)
+      cat <<'EOF'
+Usage: configure-instance.sh [options]
+
+Options:
+  --mode <auto|manual>            Configuration mode (default: manual)
+  --non-interactive               Do not ask follow-up confirmations
+  --port <value>                  Preseed app port
+  --pve-host <value>              Preseed PVE_HOST
+  --pve-port <value>              Preseed PVE_PORT
+  --pve-token-id <value>          Preseed PVE_TOKEN_ID
+  --pve-token-secret <value>      Preseed PVE_TOKEN_SECRET
+  --technitium-base-url <value>   Preseed TECHNITIUM_BASE_URL
+  --technitium-zone-suffix <val>  Preseed TECHNITIUM_ZONE_SUFFIX
+EOF
+      exit 0
+      ;;
+    *)
+      err "Unknown option: $1"
+      exit 1
+      ;;
+  esac
+done
 
 info() { echo "[INFO] $1"; }
 ok() { echo "[OK] $1"; }
@@ -64,6 +136,30 @@ get_env_value() {
   local file="$2"
   [[ -f "$file" ]] || return 1
   grep -E "^${key}=" "$file" | head -n1 | cut -d= -f2-
+}
+
+normalize_mode() {
+  local m
+  m="$(echo "$1" | tr '[:upper:]' '[:lower:]')"
+  case "$m" in
+    a|auto|automatique) echo "auto" ;;
+    m|manual|manuel) echo "manual" ;;
+    *) echo "manual" ;;
+  esac
+}
+
+default_gateway_ip() {
+  ip route 2>/dev/null | awk '/^default /{print $3; exit}'
+}
+
+default_dns_ip() {
+  local ns
+  ns="$(awk '/^nameserver /{print $2; exit}' /etc/resolv.conf 2>/dev/null || true)"
+  if [[ -n "$ns" ]]; then
+    echo "$ns"
+    return
+  fi
+  default_gateway_ip
 }
 
 prompt_default() {
@@ -157,72 +253,8 @@ validate_pve_credentials() {
   return 1
 }
 
-echo ""
-echo "=== Proxmox-Interfaces | First-run configuration ==="
-echo "This writes $ENV_FILE"
-echo ""
-
-EXISTING_PORT="$(get_env_value "PORT" "$ENV_FILE" || true)"
-EXISTING_PVE_HOST="$(get_env_value "PVE_HOST" "$ENV_FILE" || true)"
-EXISTING_PVE_PORT="$(get_env_value "PVE_PORT" "$ENV_FILE" || true)"
-EXISTING_PVE_TOKEN_ID="$(get_env_value "PVE_TOKEN_ID" "$ENV_FILE" || true)"
-EXISTING_PVE_TOKEN_SECRET="$(get_env_value "PVE_TOKEN_SECRET" "$ENV_FILE" || true)"
-EXISTING_TECHNITIUM_BASE_URL="$(get_env_value "TECHNITIUM_BASE_URL" "$ENV_FILE" || true)"
-EXISTING_TECHNITIUM_ZONE_SUFFIX="$(get_env_value "TECHNITIUM_ZONE_SUFFIX" "$ENV_FILE" || true)"
-
-while true; do
-  PORT="$(prompt_default "App port" "${EXISTING_PORT:-3000}")"
-  PVE_HOST="$(prompt_default "Proxmox host/IP" "${EXISTING_PVE_HOST:-10.0.0.10}")"
-  PVE_PORT="$(prompt_default "Proxmox API port" "${EXISTING_PVE_PORT:-8006}")"
-  PVE_TOKEN_ID="$(prompt_default "Proxmox token id" "${EXISTING_PVE_TOKEN_ID:-api-user@pve!proxmox-interfaces}")"
-  PVE_TOKEN_SECRET="$(prompt_secret "Proxmox token secret" "${EXISTING_PVE_TOKEN_SECRET:-}")"
-  TECHNITIUM_BASE_URL="$(prompt_default "Technitium base URL" "${EXISTING_TECHNITIUM_BASE_URL:-http://10.0.0.53:5380}")"
-  TECHNITIUM_ZONE_SUFFIX="$(prompt_default "Technitium zone suffix" "${EXISTING_TECHNITIUM_ZONE_SUFFIX:-.internal}")"
-
-  if [[ -z "$PVE_HOST" || -z "$PVE_TOKEN_ID" || -z "$PVE_TOKEN_SECRET" ]]; then
-    warn "PVE_HOST, PVE_TOKEN_ID and PVE_TOKEN_SECRET are required."
-    continue
-  fi
-
-  echo ""
-  info "Configuration summary:"
-  echo "  PORT=${PORT}"
-  echo "  PVE_HOST=${PVE_HOST}"
-  echo "  PVE_PORT=${PVE_PORT}"
-  echo "  PVE_TOKEN_ID=${PVE_TOKEN_ID}"
-  echo "  PVE_TOKEN_SECRET=$(mask_secret "$PVE_TOKEN_SECRET")"
-  echo "  TECHNITIUM_BASE_URL=${TECHNITIUM_BASE_URL}"
-  echo "  TECHNITIUM_ZONE_SUFFIX=${TECHNITIUM_ZONE_SUFFIX}"
-  echo ""
-
-  if prompt_yes_no "Validate Proxmox API credentials now?" "Y"; then
-    if validate_pve_credentials "$PVE_HOST" "$PVE_PORT" "$PVE_TOKEN_ID" "$PVE_TOKEN_SECRET"; then
-      break
-    fi
-
-    warn "Credentials validation failed."
-    if prompt_yes_no "Retry configuration values?" "Y"; then
-      echo ""
-      continue
-    fi
-
-    if prompt_yes_no "Save anyway and restart service?" "N"; then
-      warn "Proceeding without validated Proxmox credentials."
-      break
-    fi
-
-    echo ""
-    continue
-  fi
-
-  warn "Skipping Proxmox validation may lead to empty live inventory."
-  if prompt_yes_no "Save anyway and restart service?" "N"; then
-    break
-  fi
-  echo ""
-done
-
-cat > "$ENV_FILE" <<EOF
+write_env_and_restart() {
+  cat > "$ENV_FILE" <<EOF
 PORT=${PORT}
 
 PVE_HOST=${PVE_HOST}
@@ -242,25 +274,171 @@ TECHNITIUM_TOTP=
 TECHNITIUM_ZONE_SUFFIX=${TECHNITIUM_ZONE_SUFFIX}
 EOF
 
-chmod 600 "$ENV_FILE"
+  chmod 600 "$ENV_FILE"
 
-ok "Wrote $ENV_FILE"
-info "Restarting service..."
-systemctl restart "$SERVICE_NAME"
-sleep 2
+  ok "Wrote $ENV_FILE"
+  info "Restarting service..."
+  systemctl restart "$SERVICE_NAME"
+  sleep 2
 
-if systemctl is-active --quiet "$SERVICE_NAME"; then
-  ok "Service is active"
+  if systemctl is-active --quiet "$SERVICE_NAME"; then
+    ok "Service is active"
+  else
+    err "Service failed to start"
+    journalctl -u "$SERVICE_NAME" -n 80 --no-pager || true
+    exit 1
+  fi
+
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1/ || echo "000")
+  info "Local HTTP status: $CODE"
+  if [[ "$CODE" != "200" ]]; then
+    warn "App did not return 200 yet. Check logs: journalctl -u ${SERVICE_NAME} -f"
+  fi
+
+  ok "First-run configuration completed."
+}
+
+run_manual_configuration() {
+  while true; do
+    PORT="$(prompt_default "App port" "${EXISTING_PORT:-3000}")"
+    PVE_HOST="$(prompt_default "Proxmox host/IP" "${EXISTING_PVE_HOST:-10.0.0.10}")"
+    PVE_PORT="$(prompt_default "Proxmox API port" "${EXISTING_PVE_PORT:-8006}")"
+    PVE_TOKEN_ID="$(prompt_default "Proxmox token id" "${EXISTING_PVE_TOKEN_ID:-api-user@pve!proxmox-interfaces}")"
+    PVE_TOKEN_SECRET="$(prompt_secret "Proxmox token secret" "${EXISTING_PVE_TOKEN_SECRET:-}")"
+    TECHNITIUM_BASE_URL="$(prompt_default "Technitium base URL" "${EXISTING_TECHNITIUM_BASE_URL:-http://10.0.0.53:5380}")"
+    TECHNITIUM_ZONE_SUFFIX="$(prompt_default "Technitium zone suffix" "${EXISTING_TECHNITIUM_ZONE_SUFFIX:-.internal}")"
+
+    if [[ -z "$PVE_HOST" || -z "$PVE_TOKEN_ID" || -z "$PVE_TOKEN_SECRET" ]]; then
+      warn "PVE_HOST, PVE_TOKEN_ID and PVE_TOKEN_SECRET are required."
+      continue
+    fi
+
+    echo ""
+    info "Configuration summary:"
+    echo "  PORT=${PORT}"
+    echo "  PVE_HOST=${PVE_HOST}"
+    echo "  PVE_PORT=${PVE_PORT}"
+    echo "  PVE_TOKEN_ID=${PVE_TOKEN_ID}"
+    echo "  PVE_TOKEN_SECRET=$(mask_secret "$PVE_TOKEN_SECRET")"
+    echo "  TECHNITIUM_BASE_URL=${TECHNITIUM_BASE_URL}"
+    echo "  TECHNITIUM_ZONE_SUFFIX=${TECHNITIUM_ZONE_SUFFIX}"
+    echo ""
+
+    if prompt_yes_no "Validate Proxmox API credentials now?" "Y"; then
+      if validate_pve_credentials "$PVE_HOST" "$PVE_PORT" "$PVE_TOKEN_ID" "$PVE_TOKEN_SECRET"; then
+        break
+      fi
+
+      warn "Credentials validation failed."
+      if prompt_yes_no "Retry configuration values?" "Y"; then
+        echo ""
+        continue
+      fi
+
+      if prompt_yes_no "Save anyway and restart service?" "N"; then
+        warn "Proceeding without validated Proxmox credentials."
+        break
+      fi
+
+      echo ""
+      continue
+    fi
+
+    warn "Skipping Proxmox validation may lead to empty live inventory."
+    if prompt_yes_no "Save anyway and restart service?" "N"; then
+      break
+    fi
+    echo ""
+  done
+}
+
+run_auto_configuration() {
+  local gw dns_ip auto_host
+
+  gw="$(default_gateway_ip || true)"
+  dns_ip="$(default_dns_ip || true)"
+  auto_host="${gw:-10.0.0.10}"
+
+  PORT="${PRESET_PORT:-${EXISTING_PORT:-3000}}"
+  PVE_HOST="${PRESET_PVE_HOST:-${EXISTING_PVE_HOST:-$auto_host}}"
+  PVE_PORT="${PRESET_PVE_PORT:-${EXISTING_PVE_PORT:-8006}}"
+  PVE_TOKEN_ID="${PRESET_PVE_TOKEN_ID:-${EXISTING_PVE_TOKEN_ID:-api-user@pve!proxmox-interfaces}}"
+  PVE_TOKEN_SECRET="${PRESET_PVE_TOKEN_SECRET:-${EXISTING_PVE_TOKEN_SECRET:-}}"
+
+  if [[ -n "${PRESET_TECHNITIUM_BASE_URL:-}" ]]; then
+    TECHNITIUM_BASE_URL="$PRESET_TECHNITIUM_BASE_URL"
+  elif [[ -n "${EXISTING_TECHNITIUM_BASE_URL:-}" ]]; then
+    TECHNITIUM_BASE_URL="$EXISTING_TECHNITIUM_BASE_URL"
+  elif [[ -n "$dns_ip" ]]; then
+    TECHNITIUM_BASE_URL="http://${dns_ip}:5380"
+  else
+    TECHNITIUM_BASE_URL="http://10.0.0.53:5380"
+  fi
+
+  TECHNITIUM_ZONE_SUFFIX="${PRESET_TECHNITIUM_ZONE_SUFFIX:-${EXISTING_TECHNITIUM_ZONE_SUFFIX:-.internal}}"
+
+  if [[ -z "$PVE_TOKEN_SECRET" ]]; then
+    if [[ "$NON_INTERACTIVE" == "1" ]]; then
+      err "Auto mode requires PVE token secret (existing .env or --pve-token-secret)."
+      exit 1
+    fi
+    warn "PVE token secret is missing."
+    PVE_TOKEN_SECRET="$(prompt_secret "Proxmox token secret" "")"
+    if [[ -z "$PVE_TOKEN_SECRET" ]]; then
+      err "PVE token secret is required."
+      exit 1
+    fi
+  fi
+
+  echo ""
+  info "Automatic profile summary:"
+  echo "  PORT=${PORT}"
+  echo "  PVE_HOST=${PVE_HOST}"
+  echo "  PVE_PORT=${PVE_PORT}"
+  echo "  PVE_TOKEN_ID=${PVE_TOKEN_ID}"
+  echo "  PVE_TOKEN_SECRET=$(mask_secret "$PVE_TOKEN_SECRET")"
+  echo "  TECHNITIUM_BASE_URL=${TECHNITIUM_BASE_URL}"
+  echo "  TECHNITIUM_ZONE_SUFFIX=${TECHNITIUM_ZONE_SUFFIX}"
+  echo ""
+
+  if ! validate_pve_credentials "$PVE_HOST" "$PVE_PORT" "$PVE_TOKEN_ID" "$PVE_TOKEN_SECRET"; then
+    if [[ "$NON_INTERACTIVE" == "1" ]]; then
+      err "Automatic mode aborted because Proxmox validation failed."
+      exit 1
+    fi
+
+    warn "Automatic mode validation failed."
+    if prompt_yes_no "Switch to manual mode now?" "Y"; then
+      run_manual_configuration
+      return
+    fi
+
+    if ! prompt_yes_no "Save automatic values anyway and restart service?" "N"; then
+      err "Automatic configuration cancelled."
+      exit 1
+    fi
+  fi
+}
+
+echo ""
+echo "=== Proxmox-Interfaces | First-run configuration ==="
+echo "This writes $ENV_FILE"
+echo ""
+
+CONFIG_MODE="$(normalize_mode "$CONFIG_MODE")"
+
+EXISTING_PORT="$(get_env_value "PORT" "$ENV_FILE" || true)"
+EXISTING_PVE_HOST="$(get_env_value "PVE_HOST" "$ENV_FILE" || true)"
+EXISTING_PVE_PORT="$(get_env_value "PVE_PORT" "$ENV_FILE" || true)"
+EXISTING_PVE_TOKEN_ID="$(get_env_value "PVE_TOKEN_ID" "$ENV_FILE" || true)"
+EXISTING_PVE_TOKEN_SECRET="$(get_env_value "PVE_TOKEN_SECRET" "$ENV_FILE" || true)"
+EXISTING_TECHNITIUM_BASE_URL="$(get_env_value "TECHNITIUM_BASE_URL" "$ENV_FILE" || true)"
+EXISTING_TECHNITIUM_ZONE_SUFFIX="$(get_env_value "TECHNITIUM_ZONE_SUFFIX" "$ENV_FILE" || true)"
+
+if [[ "$CONFIG_MODE" == "auto" ]]; then
+  run_auto_configuration
 else
-  err "Service failed to start"
-  journalctl -u "$SERVICE_NAME" -n 80 --no-pager || true
-  exit 1
+  run_manual_configuration
 fi
 
-CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1/ || echo "000")
-info "Local HTTP status: $CODE"
-if [[ "$CODE" != "200" ]]; then
-  warn "App did not return 200 yet. Check logs: journalctl -u ${SERVICE_NAME} -f"
-fi
-
-ok "First-run configuration completed."
+write_env_and_restart

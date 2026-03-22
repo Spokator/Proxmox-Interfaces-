@@ -15,6 +15,7 @@ SERVICE_NAME="proxmox-interfaces"
 INSTALL_SYSTEM_UPGRADE="${INSTALL_SYSTEM_UPGRADE:-0}"
 MANAGE_UFW="${MANAGE_UFW:-0}"
 POST_INSTALL_WIZARD="${POST_INSTALL_WIZARD:-auto}"
+POST_INSTALL_PROFILE="${POST_INSTALL_PROFILE:-auto}"
 
 GREEN='\033[0;32m'; BLUE='\033[0;34m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
@@ -66,7 +67,20 @@ is_runtime_configured() {
 run_post_install_wizard() {
   local wizard_script="$APP_DIR/deploy/configure-instance.sh"
   local mode
+  local profile
   mode=$(echo "$POST_INSTALL_WIZARD" | tr '[:upper:]' '[:lower:]')
+  profile=$(echo "$POST_INSTALL_PROFILE" | tr '[:upper:]' '[:lower:]')
+
+  if [ "$profile" != "manual" ] && [ "$profile" != "manuel" ] && [ "$profile" != "auto" ] && [ "$profile" != "automatique" ]; then
+    profile="auto"
+  fi
+
+  if [ "$profile" = "manuel" ]; then
+    profile="manual"
+  fi
+  if [ "$profile" = "automatique" ]; then
+    profile="auto"
+  fi
 
   if [ ! -x "$wizard_script" ]; then
     info "Wizard post-install introuvable: $wizard_script"
@@ -85,7 +99,7 @@ run_post_install_wizard() {
 
   if [ "$mode" = "1" ] || [ "$mode" = "true" ] || [ "$mode" = "yes" ] || [ "$mode" = "on" ]; then
     step "Assistant de configuration (.env)"
-    bash "$wizard_script"
+    bash "$wizard_script" --mode "$profile"
     return 0
   fi
 
@@ -106,7 +120,22 @@ run_post_install_wizard() {
   answer=$(echo "$answer" | tr '[:upper:]' '[:lower:]')
 
   if [ -z "$answer" ] || [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "o" ] || [ "$answer" = "oui" ]; then
-    bash "$wizard_script"
+    echo -e "${YELLOW}[INFO]${NC} Mode de configuration : [A]utomatique (recommandé) / [M]anuel"
+    local mode_answer=""
+    if [ -r /dev/tty ]; then
+      read -r mode_answer < /dev/tty || true
+    else
+      read -r mode_answer || true
+    fi
+    mode_answer=$(echo "$mode_answer" | tr '[:upper:]' '[:lower:]')
+
+    if [ "$mode_answer" = "m" ] || [ "$mode_answer" = "manual" ] || [ "$mode_answer" = "manuel" ]; then
+      profile="manual"
+    else
+      profile="auto"
+    fi
+
+    bash "$wizard_script" --mode "$profile"
   else
     info "Wizard post-install ignoré par l'utilisateur"
   fi
