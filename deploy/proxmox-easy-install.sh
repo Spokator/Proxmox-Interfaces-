@@ -133,9 +133,14 @@ if ! pveam list "$TEMPLATE_STORAGE" 2>/dev/null | grep -qF "$TEMPLATE"; then
   pveam download "$TEMPLATE_STORAGE" "$TEMPLATE"
 fi
 
+if [[ "$CT_IP_CIDR" != "dhcp" && "$CT_IP_CIDR" != */* ]]; then
+  # Be tolerant with interactive input like "192.168.8.198".
+  CT_IP_CIDR="${CT_IP_CIDR}/24"
+fi
+
 NET_ARG="name=eth0,bridge=${CT_BRIDGE},ip=${CT_IP_CIDR}"
 if [[ -n "$CT_GATEWAY" && "$CT_IP_CIDR" != "dhcp" ]]; then
-  NET_ARG+="\,gw=${CT_GATEWAY}"
+  NET_ARG+=",gw=${CT_GATEWAY}"
 fi
 
 CREATE_ARGS=(
