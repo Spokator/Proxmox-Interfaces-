@@ -351,9 +351,15 @@ async function fetchProxmoxContainersLive() {
   return res.json();
 }
 
-async function fetchTechnitiumStatus() {
-  const res = await fetch('/api/dns/technitium');
-  if (!res.ok) throw new Error('Erreur récupération DNS Technitium');
+async function fetchDnsStatus() {
+  const res = await fetch('/api/dns/status');
+  if (!res.ok) throw new Error('Erreur récupération statut DNS');
+  return res.json();
+}
+
+async function fetchDnsConfigCheck() {
+  const res = await fetch('/api/dns/config-check');
+  if (!res.ok) throw new Error('Erreur récupération config DNS');
   return res.json();
 }
 
@@ -2966,6 +2972,7 @@ function evaluateMigrationReadiness(profile, ctx) {
   const live = ctx.live || null;
   const overview = ctx.overview || null;
   const dns = ctx.dns || null;
+  const dnsCfg = ctx.dnsCfg || null;
 
   const configured = !!cfg?.configured;
   const connected = !!cfg?.connectivity?.ok;
@@ -3065,14 +3072,31 @@ function evaluateMigrationReadiness(profile, ctx) {
   ));
 
   if (profile.requireTechnitium) {
-    const dnsOk = !!dns?.ok && dns?.source !== 'error' && dns?.source !== 'disabled';
+    const dnsOk = !!dns?.ok
+      && dns?.provider === 'technitium'
+      && dns?.source !== 'error'
+      && dns?.source !== 'disabled';
     checks.push(migrationCheck(
       'technitium-dns',
       'Integration DNS Technitium',
       dnsOk ? 'pass' : 'fail',
       true,
-      dnsOk ? `Source=${dns?.source || 'N/A'} (${dns?.zones || 0} zone(s))` : `Source=${dns?.source || 'N/A'}`,
+      dnsOk
+        ? `Provider=${dns?.provider || 'N/A'} · Source=${dns?.source || 'N/A'} (${dns?.zones || 0} zone(s))`
+        : `Provider=${dns?.provider || 'N/A'} · Source=${dns?.source || 'N/A'}`,
       'Configurer TECHNITIUM_* et verifier les zones cibles.'
+    ));
+  }
+
+  if (dnsCfg) {
+    const dnsCfgOk = !!dnsCfg.ok && !!dnsCfg.configReady && !!dnsCfg.healthy;
+    checks.push(migrationCheck(
+      'dns-provider-health',
+      'Sante provider DNS actif',
+      dnsCfgOk ? 'pass' : 'warn',
+      false,
+      `Provider=${dnsCfg?.provider || 'N/A'} · Source=${dnsCfg?.source || 'N/A'}`,
+      dnsCfg?.recommendation || 'Aucune action DNS immediate.'
     ));
   }
 
@@ -3193,7 +3217,8 @@ async function runAdminMigrationAudit(options = {}) {
     fetchProxmoxWatchers(),
     fetchProxmoxContainersLive(),
     fetchOverview(),
-    profile.requireTechnitium ? fetchTechnitiumStatus() : Promise.resolve(null),
+    profile.requireTechnitium ? fetchDnsStatus() : Promise.resolve(null),
+    fetchDnsConfigCheck(),
   ]);
 
   const ctx = {
@@ -3202,6 +3227,7 @@ async function runAdminMigrationAudit(options = {}) {
     live: calls[2].status === 'fulfilled' ? calls[2].value : null,
     overview: calls[3].status === 'fulfilled' ? calls[3].value : null,
     dns: calls[4].status === 'fulfilled' ? calls[4].value : null,
+    dnsCfg: calls[5].status === 'fulfilled' ? calls[5].value : null,
   };
 
   const audit = evaluateMigrationReadiness(profile, ctx);
