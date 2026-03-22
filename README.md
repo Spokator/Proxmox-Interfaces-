@@ -1,17 +1,22 @@
 # Proxmox-Interfaces
 
-Proxmox-Interfaces is a web control plane for Proxmox environments:
-- live inventory of CT/VM,
-- infrastructure and service visibility,
-- migration readiness checks,
-- community-style deployment scripts.
+[![CI](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/ci.yml/badge.svg)](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/ci.yml)
+[![Release](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/release.yml/badge.svg)](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/release.yml)
 
-This public repository contains generic examples only.
-No client-specific infrastructure details should be committed.
+Proxmox-Interfaces is an operations-focused web control plane for Proxmox environments.
 
-## Quick install on Proxmox (community-style)
+Main capabilities:
+- live inventory for CT/VM and exposed services,
+- infrastructure visibility and migration readiness checks,
+- community-style deployment for Proxmox LXC,
+- practical operations tooling (diagnose, support bundle, first-run wizard).
 
-### Public bootstrap + private artifact (recommended)
+This public repository must stay generic.
+Do not commit client-specific infrastructure details.
+
+## 1) Quickstart (Proxmox host)
+
+Recommended model: public bootstrap + private release artifact.
 
 ```bash
 curl -fsSL https://YOUR-PUBLIC-BOOTSTRAP/proxmox-interfaces-bootstrap.sh | bash -s -- \
@@ -28,69 +33,107 @@ curl -fsSL https://YOUR-PUBLIC-BOOTSTRAP/proxmox-interfaces-bootstrap.sh | bash 
   --disk 12
 ```
 
-### Interactive helper mode
+Interactive mode:
 
 ```bash
 curl -fsSL https://YOUR-PUBLIC-BOOTSTRAP/proxmox-interfaces-bootstrap.sh | bash
 ```
 
-### First-run configuration (inside installed instance)
-
-After deployment, run the guided environment wizard:
+After install, inside instance:
 
 ```bash
 bash /opt/proxmox-interfaces/deploy/configure-instance.sh
-```
-
-Useful runtime commands:
-
-```bash
 bash /opt/proxmox-interfaces/deploy/diagnose.sh
 bash /opt/proxmox-interfaces/deploy/support-bundle.sh
 ```
 
-## Build private artifacts
+## 2) Local development
 
-Run on Linux from repository root:
+Requirements:
+- Node.js 20+
+
+```bash
+npm ci
+npm run dev
+```
+
+Quality checks:
+
+```bash
+npm run ci
+```
+
+The CI command runs:
+- syntax validation on `server.js`,
+- smoke test against `/api/status`.
+
+## 3) Docker deployment
+
+```bash
+cp .env.example .env
+# edit .env
+docker compose up -d --build
+```
+
+## 4) Release and GitHub publication
+
+Build private artifacts (Linux):
 
 ```bash
 bash deploy/proxmox-interfaces-release.sh
 ```
 
-Outputs in `dist/`:
+Output files in `dist/`:
 - `proxmox-interfaces-latest.tar.gz`
 - `proxmox-interfaces-latest.sha256`
-- versioned artifact and checksum
+- `proxmox-interfaces-vX.Y.Z.tar.gz`
+- `proxmox-interfaces-vX.Y.Z.sha256`
 
-## Docker deployment
+Publish on GitHub:
 
-```bash
-cp .env.example .env
-# edit .env
-
-docker compose up -d --build
+```powershell
+$env:GITHUB_TOKEN = "<token>"
+./deploy/publish-github-release.ps1 -Repo "<owner>/<repo>" -Tag "vX.Y.Z" -Name "vX.Y.Z" -NotesFile ".\release-notes-vX.Y.Z.md"
+./deploy/upload-release-assets.ps1 -Repo "<owner>/<repo>" -Tag "vX.Y.Z"
 ```
 
-## Security notes
+Detailed distribution model:
+- `PROXMOX_INTERFACES_DISTRIBUTION.md`
 
-- Do not commit `.env`, runtime `data/`, backups, or customer runbooks.
-- Prefer private artifact distribution with checksum verification.
-- Keep bootstrap script public and generic; keep source artifacts private.
+## 5) Operations
 
-## Operations
-
-- Runtime support guide: `SUPPORT_RUNBOOK.md`
+- Support runbook: `SUPPORT_RUNBOOK.md`
 - Quick diagnosis: `bash /opt/proxmox-interfaces/deploy/diagnose.sh`
-- Bundle export: `bash /opt/proxmox-interfaces/deploy/support-bundle.sh`
+- Support bundle export: `bash /opt/proxmox-interfaces/deploy/support-bundle.sh`
 
-## Repository structure
+## 6) Security
 
-- `server.js`: backend API
-- `public/`: frontend SPA
-- `deploy/proxmox-interfaces-bootstrap.sh`: production bootstrap entrypoint
-- `deploy/proxmox-easy-install.sh`: LXC installer
+- Never commit `.env`, runtime `data/`, backups, or customer runbooks.
+- Always verify SHA256 checksums in production install flows.
+- Keep bootstrap script public and generic; keep application artifacts private.
+- See `SECURITY.md` for reporting and operational recommendations.
+
+## 7) Project structure
+
+- `server.js`: backend API and SPA serving
+- `public/`: frontend app and static resources
+- `deploy/proxmox-interfaces-bootstrap.sh`: public bootstrap entrypoint
+- `deploy/proxmox-easy-install.sh`: Proxmox LXC installer
 - `deploy/proxmox-interfaces-release.sh`: artifact packager
 - `deploy/configure-instance.sh`: first-run `.env` wizard
 - `deploy/diagnose.sh`: quick runtime diagnostics
 - `deploy/support-bundle.sh`: support bundle export
-- `PROXMOX_INTERFACES_DISTRIBUTION.md`: private distribution model
+- `deploy/publish-github-release.ps1`: release creation helper
+- `deploy/upload-release-assets.ps1`: release assets uploader
+
+## 8) Contributing
+
+See `CONTRIBUTING.md`.
+
+## 9) GitHub workflow and governance
+
+- CI runs on push and pull request to `main`.
+- Release workflow runs automatically when pushing a tag like `v1.0.3`.
+- Issue templates are available for bug reports and feature requests.
+- Pull request template enforces validation and deployment impact checks.
+- Dependabot updates npm dependencies and GitHub Actions weekly.

@@ -14,6 +14,13 @@ const execFileAsync = util.promisify(execFile);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const APP_VERSION = (() => {
+  try {
+    return require('./package.json').version || '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+})();
 
 // ---------- Middlewares ----------
 app.use(express.json());
@@ -2980,7 +2987,7 @@ app.get('/api/status', (req, res) => {
     categories: data.categories.length,
     uptime: process.uptime(),
     serverTime: new Date().toISOString(),
-    version: '1.0.0'
+    version: APP_VERSION
   });
 });
 
@@ -2992,7 +2999,7 @@ app.get('*', (req, res) => {
 // ---------- Démarrage ----------
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n╔═══════════════════════════════════════╗`);
-  console.log(`║    Proxmox-Interfaces - v1.0.0        ║`);
+  console.log(`║    Proxmox-Interfaces - v${APP_VERSION}        ║`);
   console.log(`╚═══════════════════════════════════════╝`);
   console.log(`  Serveur démarré sur http://0.0.0.0:${PORT}`);
   console.log(`  Accès local : http://localhost:${PORT}\n`);

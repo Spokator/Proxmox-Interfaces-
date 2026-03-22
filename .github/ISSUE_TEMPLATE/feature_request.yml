@@ -1,0 +1,41 @@
+name: Feature request
+description: Suggest an idea to improve Proxmox-Interfaces
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Which operator pain point are you solving?
+      placeholder: As an operator, I want ...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe your preferred approach.
+      placeholder: We could add ...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any other approaches you evaluated?
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact level
+      options:
+        - Low
+        - Medium
+        - High
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+      description: Add diagrams, references, or screenshots if useful.
