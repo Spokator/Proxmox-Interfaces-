@@ -26,8 +26,8 @@ $uploadBase = ([string]$release.upload_url).Split('{')[0]
 
 if (-not $Assets -or $Assets.Count -eq 0) {
     $Assets = @(
-        ".\\dist\\proxmox-interfaces-v1.0.0.tar.gz",
-        ".\\dist\\proxmox-interfaces-v1.0.0.sha256",
+        ".\\dist\\proxmox-interfaces-$Tag.tar.gz",
+        ".\\dist\\proxmox-interfaces-$Tag.sha256",
         ".\\dist\\proxmox-interfaces-latest.tar.gz",
         ".\\dist\\proxmox-interfaces-latest.sha256"
     )
