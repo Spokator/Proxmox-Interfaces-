@@ -73,9 +73,41 @@ success "Dépendances installées"
 # ─── Création des dossiers de données ────────────────────────
 step "Initialisation des données"
 mkdir -p "$APP_DIR/data"
+mkdir -p "$APP_DIR/public/data"
 [ ! -f "$APP_DIR/data/notes.json" ]     && echo "[]" > "$APP_DIR/data/notes.json"
 [ ! -f "$APP_DIR/data/changelog.json" ] && echo "[]" > "$APP_DIR/data/changelog.json"
+if [ ! -f "$APP_DIR/public/data/services.json" ]; then
+cat > "$APP_DIR/public/data/services.json" << 'EOF'
+{
+  "categories": [
+    {
+      "id": "infrastructure",
+      "name": "Infrastructure",
+      "icon": "server",
+      "color": "#22c55e",
+      "description": "Hypervisor, network, and base services"
+    },
+    {
+      "id": "monitoring",
+      "name": "Monitoring",
+      "icon": "activity",
+      "color": "#ef4444",
+      "description": "Metrics, health checks, and alerting"
+    },
+    {
+      "id": "automation",
+      "name": "Automation",
+      "icon": "git-branch",
+      "color": "#3b82f6",
+      "description": "Workflows and integrations"
+    }
+  ],
+  "services": []
+}
+EOF
+fi
 chown -R "$APP_USER":"$APP_USER" "$APP_DIR/data"
+chown -R "$APP_USER":"$APP_USER" "$APP_DIR/public/data"
 success "Dossiers de données créés"
 
 # ─── Service systemd ─────────────────────────────────────────

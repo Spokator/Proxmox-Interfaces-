@@ -35,10 +35,41 @@ const PROMOTIONS_FILE = path.join(__dirname, 'data', 'service-promotions.json');
 const PVE_WATCH_STATE_FILE = path.join(__dirname, 'data', 'pve-watch-state.json');
 const AUTO_REJECTIONS_FILE = path.join(__dirname, 'data', 'auto-service-rejections.json');
 
+function getDefaultServicesData() {
+  return {
+    categories: [
+      {
+        id: 'infrastructure',
+        name: 'Infrastructure',
+        icon: 'server',
+        color: '#22c55e',
+        description: 'Hypervisor, network, and base services'
+      },
+      {
+        id: 'monitoring',
+        name: 'Monitoring',
+        icon: 'activity',
+        color: '#ef4444',
+        description: 'Metrics, health checks, and alerting'
+      },
+      {
+        id: 'automation',
+        name: 'Automation',
+        icon: 'git-branch',
+        color: '#3b82f6',
+        description: 'Workflows and integrations'
+      }
+    ],
+    services: []
+  };
+}
+
 // Créer les dossiers/fichiers si nécessaire
 [path.join(__dirname, 'data')].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
+if (!fs.existsSync(path.dirname(SERVICES_FILE))) fs.mkdirSync(path.dirname(SERVICES_FILE), { recursive: true });
+if (!fs.existsSync(SERVICES_FILE)) fs.writeFileSync(SERVICES_FILE, JSON.stringify(getDefaultServicesData(), null, 2));
 if (!fs.existsSync(NOTES_FILE))     fs.writeFileSync(NOTES_FILE,     JSON.stringify([], null, 2));
 if (!fs.existsSync(CHANGELOG_FILE)) fs.writeFileSync(CHANGELOG_FILE, JSON.stringify([], null, 2));
 if (!fs.existsSync(HEALTH_FILE))    fs.writeFileSync(HEALTH_FILE,    JSON.stringify({ ts: 0, results: [] }, null, 2));
