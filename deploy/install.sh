@@ -12,6 +12,8 @@ APP_USER="proxmox-interfaces"
 APP_PORT=3000
 DOMAIN="proxmox-interfaces.local"
 SERVICE_NAME="proxmox-interfaces"
+INSTALL_SYSTEM_UPGRADE="${INSTALL_SYSTEM_UPGRADE:-0}"
+MANAGE_UFW="${MANAGE_UFW:-0}"
 
 GREEN='\033[0;32m'; BLUE='\033[0;34m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
@@ -27,7 +29,12 @@ echo -e "${BLUE}╚════════════════════�
 # ─── Mise à jour système ──────────────────────────────────────
 step "Mise à jour du système"
 apt-get update -qq
-apt-get upgrade -y -qq
+if [ "$INSTALL_SYSTEM_UPGRADE" = "1" ]; then
+  apt-get upgrade -y -qq
+  success "Upgrade système appliqué"
+else
+  info "Upgrade système ignoré (INSTALL_SYSTEM_UPGRADE=0)"
+fi
 apt-get install -y -qq curl wget gnupg2 ca-certificates nginx ufw
 
 # ─── Installation Node.js 20 LTS ──────────────────────────────
@@ -161,14 +168,19 @@ nginx -t && systemctl enable nginx && systemctl restart nginx
 success "Nginx configuré et démarré"
 
 # ─── Firewall UFW ─────────────────────────────────────────────
-step "Configuration du pare-feu"
-ufw --force reset
-ufw default deny incoming
-ufw default allow outgoing
-ufw allow ssh
-ufw allow 80/tcp    # HTTP (Nginx)
-ufw --force enable
-success "Pare-feu configuré"
+if [ "$MANAGE_UFW" = "1" ]; then
+  step "Configuration du pare-feu"
+  ufw --force reset
+  ufw default deny incoming
+  ufw default allow outgoing
+  ufw allow ssh
+  ufw allow 80/tcp    # HTTP (Nginx)
+  ufw --force enable
+  success "Pare-feu configuré"
+else
+  step "Configuration du pare-feu"
+  info "Configuration UFW ignorée (MANAGE_UFW=0)"
+fi
 
 # ─── Outils d'exploitation ────────────────────────────────────
 step "Activation des scripts d'exploitation"

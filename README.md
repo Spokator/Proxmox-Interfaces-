@@ -35,6 +35,22 @@ curl -fsSL https://YOUR-PUBLIC-BOOTSTRAP/proxmox-interfaces-bootstrap.sh | bash 
   --disk 12
 ```
 
+Production hardening options:
+- add `--system-upgrade` to run apt upgrade inside the CT,
+- add `--manage-ufw` to apply UFW rules inside the CT.
+
+Example:
+
+```bash
+curl -fsSL https://YOUR-PUBLIC-BOOTSTRAP/proxmox-interfaces-bootstrap.sh | bash -s -- \
+  --yes \
+  --artifact-url https://YOUR-PRIVATE-DIST/proxmox-interfaces-latest.tar.gz \
+  --artifact-sha256-url https://YOUR-PRIVATE-DIST/proxmox-interfaces-latest.sha256 \
+  --ctid 190 --name proxmox-interfaces-a --storage local-lvm --bridge vmbr0 --ip dhcp \
+  --cores 2 --ram 1024 --disk 12 \
+  --system-upgrade --manage-ufw
+```
+
 Interactive mode:
 
 ```bash
