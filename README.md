@@ -158,6 +158,10 @@ See `CONTRIBUTING.md`.
 - Pull request template enforces validation and deployment impact checks.
 - Dependabot updates npm dependencies and GitHub Actions weekly.
 
+Dependency review note:
+- `dependency-review` runs only if repository variable `ENABLE_DEPENDENCY_REVIEW=true`.
+- Enable it after turning on Dependency graph in repository security settings.
+
 ## 10) Architecture
 
 - Technical architecture overview: `docs/ARCHITECTURE.md`
