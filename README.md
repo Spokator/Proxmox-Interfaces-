@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/ci.yml/badge.svg)](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/ci.yml)
 [![Release](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/release.yml/badge.svg)](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/release.yml)
+[![Security](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/security.yml/badge.svg)](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/security.yml)
+[![CodeQL](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/codeql.yml/badge.svg)](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/codeql.yml)
 
 Proxmox-Interfaces is an operations-focused web control plane for Proxmox environments.
 
@@ -134,6 +136,12 @@ See `CONTRIBUTING.md`.
 
 - CI runs on push and pull request to `main`.
 - Release workflow runs automatically when pushing a tag like `v1.0.3`.
+- Security workflow runs npm audit and dependency review checks.
+- CodeQL analyzes JavaScript code for security and quality issues.
 - Issue templates are available for bug reports and feature requests.
 - Pull request template enforces validation and deployment impact checks.
 - Dependabot updates npm dependencies and GitHub Actions weekly.
+
+## 10) Architecture
+
+- Technical architecture overview: `docs/ARCHITECTURE.md`
