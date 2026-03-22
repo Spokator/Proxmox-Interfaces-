@@ -47,5 +47,20 @@ EOF
 
 systemctl daemon-reload
 systemctl enable --now smartctl_exporter
-systemctl is-active smartctl_exporter
-curl -fsS http://127.0.0.1:9633/metrics | head -n 25
+
+# Le service peut démarrer avec un petit délai: on attend brièvement avant de vérifier /metrics.
+attempt=1
+max_attempts=15
+while [ "$attempt" -le "$max_attempts" ]; do
+  if curl -fsS http://127.0.0.1:9633/metrics >/tmp/smartctl_exporter_metrics.txt 2>/dev/null; then
+    head -n 25 /tmp/smartctl_exporter_metrics.txt
+    exit 0
+  fi
+  sleep 2
+  attempt=$((attempt + 1))
+done
+
+echo "smartctl_exporter n'a pas répondu sur 127.0.0.1:9633 après plusieurs tentatives" >&2
+systemctl status --no-pager smartctl_exporter || true
+journalctl -u smartctl_exporter -n 80 --no-pager || true
+exit 1

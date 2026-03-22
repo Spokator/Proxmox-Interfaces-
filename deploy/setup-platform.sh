@@ -190,7 +190,9 @@ if [[ "$INSTALL_SMARTCTL" == "1" ]]; then
     log_warn "smartctl installer not found: $SMARTCTL_INSTALLER"
   else
     log_info "Installing smartctl exporter..."
-    bash "$SMARTCTL_INSTALLER"
+    if ! bash "$SMARTCTL_INSTALLER"; then
+      log_warn "smartctl exporter installation/check failed (continuing)."
+    fi
   fi
 fi
 
@@ -203,11 +205,13 @@ if [[ "$CONFIGURE_PROMETHEUS" == "1" ]]; then
     log_warn "Prometheus setup script not found: $PROM_SETUP_SCRIPT"
   else
     log_info "Configuring Prometheus scrape job..."
-    bash "$PROM_SETUP_SCRIPT" \
+    if ! bash "$PROM_SETUP_SCRIPT" \
       --ctid "$PROMETHEUS_CTID" \
       --target "$PROMETHEUS_TARGET" \
       --config "$PROMETHEUS_CONFIG" \
-      --container "$PROMETHEUS_CONTAINER"
+      --container "$PROMETHEUS_CONTAINER"; then
+      log_warn "Prometheus scrape configuration failed (continuing)."
+    fi
   fi
 fi
 
