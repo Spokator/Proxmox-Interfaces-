@@ -61,6 +61,7 @@ After install, inside instance:
 
 ```bash
 bash /opt/proxmox-interfaces/deploy/configure-instance.sh
+bash /opt/proxmox-interfaces/deploy/setup-platform.sh
 bash /opt/proxmox-interfaces/deploy/diagnose.sh
 bash /opt/proxmox-interfaces/deploy/support-bundle.sh
 ```
@@ -73,6 +74,8 @@ Important:
 - the wizard now validates Proxmox credentials against the API before restarting the service (with explicit confirmation required to skip).
 - the wizard now supports two profiles: `--mode auto` (recommended defaults + validation) and `--mode manual` (full field-by-field input).
 - you can preselect post-install profile with `POST_INSTALL_PROFILE=auto|manual` (default: `auto`).
+- a full setup orchestrator is available with `deploy/setup-platform.sh` (core config + optional monitoring stack hooks).
+- control full setup prompt with `POST_INSTALL_PLATFORM_SETUP=auto|true|false` (default: `auto`).
 
 ## 2) Local development
 
@@ -148,6 +151,7 @@ Detailed distribution model:
 - `deploy/proxmox-easy-install.sh`: Proxmox LXC installer
 - `deploy/proxmox-interfaces-release.sh`: artifact packager
 - `deploy/configure-instance.sh`: first-run `.env` wizard
+- `deploy/setup-platform.sh`: complete platform setup orchestrator (auto/manual)
 - `deploy/diagnose.sh`: quick runtime diagnostics
 - `deploy/support-bundle.sh`: support bundle export
 - `deploy/publish-github-release.ps1`: release creation helper

@@ -181,7 +181,8 @@ if [[ "$INSTALL_NOW" == "1" ]]; then
   pct exec "$CT_ID" -- bash -lc "mkdir -p '${APP_DIR}'"
 
   TMP_ARCHIVE="/tmp/proxmox-interfaces-install-${CT_ID}.tgz"
-  tar -czf "$TMP_ARCHIVE" -C "$SOURCE_DIR" package.json package-lock.json server.js public deploy .env .env.example 2>/dev/null || \
+  tar -czf "$TMP_ARCHIVE" -C "$SOURCE_DIR" package.json package-lock.json server.js public deploy scripts .env .env.example 2>/dev/null || \
+  tar -czf "$TMP_ARCHIVE" -C "$SOURCE_DIR" package.json package-lock.json server.js public deploy scripts .env.example 2>/dev/null || \
   tar -czf "$TMP_ARCHIVE" -C "$SOURCE_DIR" package.json package-lock.json server.js public deploy .env.example
 
   pct push "$CT_ID" "$TMP_ARCHIVE" "$TMP_ARCHIVE"
