@@ -22,22 +22,41 @@ if [[ ! -d "$APP_DIR" ]]; then
   exit 1
 fi
 
-read_from_tty() {
+read_prompt_value() {
   local out_var="$1"
-  if [[ -r /dev/tty ]]; then
-    IFS= read -r "$out_var" < /dev/tty
+  local prompt="$2"
+  local out=""
+
+  if [[ -t 0 ]]; then
+    read -r -p "$prompt" out
+  elif [[ -r /dev/tty ]]; then
+    read -r -p "$prompt" out < /dev/tty
   else
-    IFS= read -r "$out_var"
+    printf "%s" "$prompt" >&2
+    read -r out
   fi
+
+  printf -v "$out_var" '%s' "$out"
 }
 
-read_secret_from_tty() {
+read_secret_value() {
   local out_var="$1"
-  if [[ -r /dev/tty ]]; then
-    IFS= read -r -s "$out_var" < /dev/tty
+  local prompt="$2"
+  local out=""
+
+  if [[ -t 0 ]]; then
+    read -r -s -p "$prompt" out
+    echo ""
+  elif [[ -r /dev/tty ]]; then
+    read -r -s -p "$prompt" out < /dev/tty
+    echo ""
   else
-    IFS= read -r -s "$out_var"
+    printf "%s" "$prompt" >&2
+    read -r -s out
+    echo ""
   fi
+
+  printf -v "$out_var" '%s' "$out"
 }
 
 get_env_value() {
@@ -53,11 +72,11 @@ prompt_default() {
   local out
 
   if [[ -n "$default" ]]; then
-    printf "%s [%s]: " "$label" "$default"
+    read_prompt_value out "$label [$default]: "
   else
-    printf "%s: " "$label"
+    read_prompt_value out "$label: "
   fi
-  read_from_tty out
+
   [[ -z "$out" ]] && echo "$default" || echo "$out"
 }
 
@@ -68,9 +87,7 @@ prompt_secret() {
   local hint="required"
   [[ -n "$default" ]] && hint="leave empty to keep existing"
 
-  printf "%s [%s]: " "$label" "$hint"
-  read_secret_from_tty out
-  echo ""
+  read_secret_value out "$label [$hint]: "
   [[ -z "$out" ]] && echo "$default" || echo "$out"
 }
 
@@ -79,8 +96,7 @@ prompt_yes_no() {
   local default="$2"
   local out
 
-  printf "%s [%s]: " "$label" "$default"
-  read_from_tty out
+  read_prompt_value out "$label [$default]: "
   out="${out:-$default}"
   out="$(echo "$out" | tr '[:upper:]' '[:lower:]')"
 
