@@ -25,38 +25,38 @@ fi
 read_prompt_value() {
   local out_var="$1"
   local prompt="$2"
-  local out=""
+  local reply=""
 
   if [[ -t 0 ]]; then
-    read -r -p "$prompt" out
+    read -r -p "$prompt" reply
   elif [[ -r /dev/tty ]]; then
-    read -r -p "$prompt" out < /dev/tty
+    read -r -p "$prompt" reply < /dev/tty
   else
     printf "%s" "$prompt" >&2
-    read -r out
+    read -r reply
   fi
 
-  printf -v "$out_var" '%s' "$out"
+  printf -v "$out_var" '%s' "$reply"
 }
 
 read_secret_value() {
   local out_var="$1"
   local prompt="$2"
-  local out=""
+  local reply=""
 
   if [[ -t 0 ]]; then
-    read -r -s -p "$prompt" out
+    read -r -s -p "$prompt" reply
     echo ""
   elif [[ -r /dev/tty ]]; then
-    read -r -s -p "$prompt" out < /dev/tty
+    read -r -s -p "$prompt" reply < /dev/tty
     echo ""
   else
     printf "%s" "$prompt" >&2
-    read -r -s out
+    read -r -s reply
     echo ""
   fi
 
-  printf -v "$out_var" '%s' "$out"
+  printf -v "$out_var" '%s' "$reply"
 }
 
 get_env_value() {
@@ -69,7 +69,7 @@ get_env_value() {
 prompt_default() {
   local label="$1"
   local default="$2"
-  local out
+  local out=""
 
   if [[ -n "$default" ]]; then
     read_prompt_value out "$label [$default]: "
@@ -83,7 +83,7 @@ prompt_default() {
 prompt_secret() {
   local label="$1"
   local default="$2"
-  local out
+  local out=""
   local hint="required"
   [[ -n "$default" ]] && hint="leave empty to keep existing"
 
@@ -94,7 +94,7 @@ prompt_secret() {
 prompt_yes_no() {
   local label="$1"
   local default="$2"
-  local out
+  local out=""
 
   read_prompt_value out "$label [$default]: "
   out="${out:-$default}"
