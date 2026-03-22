@@ -65,6 +65,12 @@ bash /opt/proxmox-interfaces/deploy/diagnose.sh
 bash /opt/proxmox-interfaces/deploy/support-bundle.sh
 ```
 
+Important:
+- run `configure-instance.sh` right after install to set `PVE_HOST`, `PVE_TOKEN_ID`, and `PVE_TOKEN_SECRET`.
+- without this step, the web UI starts correctly but live Proxmox inventory and auto-discovered services remain empty.
+- at the end of `deploy/install.sh`, an interactive prompt can launch this wizard automatically.
+- for automation, control this behavior with `POST_INSTALL_WIZARD=auto|true|false` (default: `auto`).
+
 ## 2) Local development
 
 Requirements:
