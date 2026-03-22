@@ -35,6 +35,7 @@ Options:
   --name <name>               Hostname (default: proxmox-interfaces)
   --storage <storage>         Rootfs storage (default: local-lvm)
   --template-storage <store>  Template storage (default: local)
+  --template <file>           LXC template filename (optional override)
   --bridge <bridge>           Network bridge (default: vmbr0)
   --ip <cidr|dhcp>            Container IP (default: dhcp)
   --gw <ip>                   Gateway IP
@@ -63,6 +64,7 @@ while [[ $# -gt 0 ]]; do
     --name) CT_NAME="$2"; shift 2 ;;
     --storage) CT_STORAGE="$2"; shift 2 ;;
     --template-storage) TEMPLATE_STORAGE="$2"; shift 2 ;;
+    --template) TEMPLATE="$2"; shift 2 ;;
     --bridge) CT_BRIDGE="$2"; shift 2 ;;
     --ip) CT_IP_CIDR="$2"; shift 2 ;;
     --gw) CT_GATEWAY="$2"; shift 2 ;;
@@ -92,7 +94,41 @@ if pct status "$CT_ID" >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! pveam list "$TEMPLATE_STORAGE" | grep -q "$TEMPLATE"; then
+resolve_template() {
+  local wanted="$1"
+  local found=""
+
+  # If requested template exists locally on the selected storage, keep it.
+  if pveam list "$TEMPLATE_STORAGE" 2>/dev/null | grep -qF "$wanted"; then
+    echo "$wanted"
+    return 0
+  fi
+
+  # Try to discover the latest Debian 12 standard template from available catalog.
+  found="$(pveam available --section system 2>/dev/null | grep -oE 'debian-12-standard_[^ ]*_amd64\.tar\.zst' | sort -V | tail -n 1 || true)"
+
+  # Fallback: maybe another Debian 12 standard template is already cached locally.
+  if [[ -z "$found" ]]; then
+    found="$(pveam list "$TEMPLATE_STORAGE" 2>/dev/null | grep -oE 'debian-12-standard_[^ ]*_amd64\.tar\.zst' | sort -V | tail -n 1 || true)"
+  fi
+
+  if [[ -z "$found" ]]; then
+    echo ""
+    return 1
+  fi
+
+  echo "$found"
+  return 0
+}
+
+if ! pveam list "$TEMPLATE_STORAGE" 2>/dev/null | grep -qF "$TEMPLATE"; then
+  detected_template="$(resolve_template "$TEMPLATE" || true)"
+  if [[ -n "$detected_template" && "$detected_template" != "$TEMPLATE" ]]; then
+    echo "[WARN] Requested template not found: $TEMPLATE"
+    echo "[INFO] Using latest available Debian 12 template: $detected_template"
+    TEMPLATE="$detected_template"
+  fi
+
   echo "[INFO] Downloading template $TEMPLATE..."
   pveam download "$TEMPLATE_STORAGE" "$TEMPLATE"
 fi
