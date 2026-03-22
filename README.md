@@ -70,6 +70,7 @@ Important:
 - without this step, the web UI starts correctly but live Proxmox inventory and auto-discovered services remain empty.
 - at the end of `deploy/install.sh`, an interactive prompt can launch this wizard automatically.
 - for automation, control this behavior with `POST_INSTALL_WIZARD=auto|true|false` (default: `auto`).
+- the wizard now validates Proxmox credentials against the API before restarting the service (with explicit confirmation required to skip).
 
 ## 2) Local development
 
