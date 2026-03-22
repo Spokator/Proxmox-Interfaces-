@@ -14,17 +14,112 @@ DOMAIN="proxmox-interfaces.local"
 SERVICE_NAME="proxmox-interfaces"
 INSTALL_SYSTEM_UPGRADE="${INSTALL_SYSTEM_UPGRADE:-0}"
 MANAGE_UFW="${MANAGE_UFW:-0}"
+POST_INSTALL_WIZARD="${POST_INSTALL_WIZARD:-auto}"
 
 GREEN='\033[0;32m'; BLUE='\033[0;34m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
 success() { echo -e "${GREEN}[OK]${NC} $1"; }
 step()    { echo -e "\n${BLUE}>>> $1${NC}"; }
 
+ensure_utf8_locale() {
+  local target_locale="en_US.UTF-8"
+
+  if locale -a 2>/dev/null | tr '[:upper:]' '[:lower:]' | grep -q '^en_us\.utf-8$\|^en_us\.utf8$'; then
+    export LANG="$target_locale"
+    export LC_ALL="$target_locale"
+    return
+  fi
+
+  info "Locale ${target_locale} absente, génération en cours"
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get install -y -qq locales
+
+  if [ -f /etc/locale.gen ]; then
+    sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+  else
+    echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
+  fi
+
+  locale-gen "$target_locale"
+  update-locale LANG="$target_locale" LC_ALL="$target_locale"
+  export LANG="$target_locale"
+  export LC_ALL="$target_locale"
+  success "Locale ${target_locale} configurée"
+}
+
+is_runtime_configured() {
+  local env_file="$APP_DIR/.env"
+  [ -f "$env_file" ] || return 1
+
+  local pve_host pve_token_id pve_token_secret
+  pve_host=$(grep -E '^PVE_HOST=' "$env_file" 2>/dev/null | head -n1 | cut -d= -f2-)
+  pve_token_id=$(grep -E '^PVE_TOKEN_ID=' "$env_file" 2>/dev/null | head -n1 | cut -d= -f2-)
+  pve_token_secret=$(grep -E '^PVE_TOKEN_SECRET=' "$env_file" 2>/dev/null | head -n1 | cut -d= -f2-)
+
+  [ -n "$pve_host" ] || return 1
+  [ -n "$pve_token_id" ] || return 1
+  [ -n "$pve_token_secret" ] || return 1
+  [ "$pve_token_secret" != "CHANGE_ME" ] || return 1
+  return 0
+}
+
+run_post_install_wizard() {
+  local wizard_script="$APP_DIR/deploy/configure-instance.sh"
+  local mode
+  mode=$(echo "$POST_INSTALL_WIZARD" | tr '[:upper:]' '[:lower:]')
+
+  if [ ! -x "$wizard_script" ]; then
+    info "Wizard post-install introuvable: $wizard_script"
+    return 0
+  fi
+
+  if is_runtime_configured; then
+    info "Configuration .env déjà détectée, wizard post-install ignoré"
+    return 0
+  fi
+
+  if [ "$mode" = "0" ] || [ "$mode" = "false" ] || [ "$mode" = "no" ] || [ "$mode" = "off" ]; then
+    info "Wizard post-install désactivé (POST_INSTALL_WIZARD=$POST_INSTALL_WIZARD)"
+    return 0
+  fi
+
+  if [ "$mode" = "1" ] || [ "$mode" = "true" ] || [ "$mode" = "yes" ] || [ "$mode" = "on" ]; then
+    step "Assistant de configuration (.env)"
+    bash "$wizard_script"
+    return 0
+  fi
+
+  if [ ! -t 0 ] && [ ! -r /dev/tty ]; then
+    info "Session non interactive: wizard post-install ignoré (POST_INSTALL_WIZARD=auto)"
+    return 0
+  fi
+
+  step "Assistant de configuration (.env)"
+  echo -e "${YELLOW}[INFO]${NC} Lancer le wizard interactif maintenant ? [Y/n]"
+
+  local answer=""
+  if [ -r /dev/tty ]; then
+    read -r answer < /dev/tty || true
+  else
+    read -r answer || true
+  fi
+  answer=$(echo "$answer" | tr '[:upper:]' '[:lower:]')
+
+  if [ -z "$answer" ] || [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "o" ] || [ "$answer" = "oui" ]; then
+    bash "$wizard_script"
+  else
+    info "Wizard post-install ignoré par l'utilisateur"
+  fi
+}
+
 echo -e "\n${BLUE}╔══════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║  Proxmox-Interfaces — Installation       ║${NC}"
 echo -e "${BLUE}╚══════════════════════════════════════════╝${NC}\n"
 
 [ "$(id -u)" -ne 0 ] && { echo "Exécuter en root."; exit 1; }
+
+# Évite les warnings apt/perl sur les CT Debian minimalistes
+ensure_utf8_locale
 
 # ─── Mise à jour système ──────────────────────────────────────
 step "Mise à jour du système"
@@ -249,4 +344,12 @@ echo -e "    systemctl restart ${SERVICE_NAME}   # Redemarrer"
 echo -e "    bash ${APP_DIR}/deploy/diagnose.sh # Diagnostic rapide"
 echo -e "    bash ${APP_DIR}/deploy/support-bundle.sh # Bundle support"
 echo -e "    bash ${APP_DIR}/deploy/configure-instance.sh # Wizard .env"
+if ! is_runtime_configured; then
+  echo ""
+  echo -e "${YELLOW}[INFO]${NC} Inventaire live Proxmox non configuré (.env incomplet)."
+  echo -e "       Lancez : bash ${APP_DIR}/deploy/configure-instance.sh"
+  echo -e "       Puis   : systemctl restart ${SERVICE_NAME}"
+fi
 echo ""
+
+run_post_install_wizard
