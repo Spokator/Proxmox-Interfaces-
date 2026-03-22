@@ -76,6 +76,13 @@ Important:
 - the wizard now supports two profiles: `--mode auto` (recommended defaults + validation) and `--mode manual` (full field-by-field input).
 - you can preselect post-install profile with `POST_INSTALL_PROFILE=auto|manual` (default: `auto`).
 - DNS setup in the wizard is provider-based (`none|technitium|custom`) so environments without Technitium can still be configured cleanly.
+- runtime DNS auto-discovery now uses a provider selector: `DNS_PROVIDER=none|technitium|custom`.
+- provider fallback is backward-compatible: if `DNS_PROVIDER` is unset and `TECHNITIUM_*` is present, Technitium is used automatically.
+- generic DNS status endpoint is available at `/api/dns/status` for readiness/audit checks.
+- DNS provider diagnostics endpoint is available at `/api/dns/config-check`.
+- for `DNS_PROVIDER=custom`, `DNS_API_URL` must return JSON in this shape:
+  - `{"byIp":{"10.0.0.20":["svc-a.internal"]},"byDomain":{"svc-a.internal":["10.0.0.20"]},"byDomainPorts":{"svc-a.internal":[80,443]}}`
+- full custom provider contract: `docs/DNS_CUSTOM_PROVIDER_CONTRACT.md`.
 - a full setup orchestrator is available with `deploy/setup-platform.sh` (core config + optional monitoring stack hooks).
 - control full setup prompt with `POST_INSTALL_PLATFORM_SETUP=auto|true|false` (default: `auto`).
 

@@ -11,6 +11,7 @@ What to verify:
 - `http://127.0.0.1/` returns `200`
 - `/api/status` returns JSON
 - `/api/proxmox/config-check` indicates configured/connected target
+- `/api/dns/config-check` indicates active provider and actionable recommendation
 
 ## 2) Collect support bundle
 

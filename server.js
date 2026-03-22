@@ -665,7 +665,7 @@ async function buildAutoDiscoveredServices(containers, existingServices, categor
           port,
           protocol,
           icon: 'server',
-          tags: ['auto', 'proxmox', 'dns', 'live', ...(dnsIndex?.source === 'technitium-api' ? ['technitium'] : [])],
+          tags: ['auto', 'proxmox', 'dns', 'live', ...(isTechnitiumDnsSource(dnsIndex) ? ['technitium'] : []), ...(dnsIndex?.provider === 'custom' ? ['custom-dns'] : [])],
           container: containerName,
           containerId,
           status: 'unknown',
@@ -673,8 +673,8 @@ async function buildAutoDiscoveredServices(containers, existingServices, categor
           autoDiscovered: true,
           sourceKey,
           autoSource: ep.fallback
-            ? (dnsIndex?.source === 'technitium-api' ? 'technitium+fallback' : 'container-fallback')
-            : (dnsIndex?.source === 'technitium-api' ? 'technitium+portscan' : 'container-portscan')
+            ? (isTechnitiumDnsSource(dnsIndex) ? 'technitium+fallback' : (dnsIndex?.provider === 'custom' ? 'custom+fallback' : 'container-fallback'))
+            : (isTechnitiumDnsSource(dnsIndex) ? 'technitium+portscan' : (dnsIndex?.provider === 'custom' ? 'custom+portscan' : 'container-portscan'))
         });
 
         knownHostPorts.add(hostPortKey);
@@ -732,6 +732,18 @@ const PVE_TOKEN_SECRET = process.env.PVE_TOKEN_SECRET;
 const PVE_WATCH_TASKS_ENABLED = String(process.env.PVE_WATCH_TASKS_ENABLED || 'true').toLowerCase() !== 'false';
 const PVE_WATCH_SYSLOG_ENABLED = String(process.env.PVE_WATCH_SYSLOG_ENABLED || 'true').toLowerCase() !== 'false';
 const PVE_WATCH_INTERVAL_MS = Math.max(5_000, Math.min(120_000, parseInt(process.env.PVE_WATCH_INTERVAL_MS || '20000', 10)));
+
+function normalizeDnsProvider(value) {
+  const p = String(value || '').trim().toLowerCase();
+  if (p === 'technitium') return 'technitium';
+  if (p === 'custom') return 'custom';
+  if (p === 'none') return 'none';
+  return '';
+}
+
+const DNS_PROVIDER = normalizeDnsProvider(process.env.DNS_PROVIDER || '');
+const DNS_API_URL = String(process.env.DNS_API_URL || '').trim();
+const DNS_API_TOKEN = process.env.DNS_API_TOKEN || '';
 
 const TECHNITIUM_BASE_URL = process.env.TECHNITIUM_BASE_URL || 'http://10.0.0.53:5380';
 const TECHNITIUM_TOKEN = process.env.TECHNITIUM_TOKEN || '';
@@ -1768,10 +1780,97 @@ async function getLiveContainers(forceRefresh = false) {
 }
 
 let mergedCache = { ts: 0, data: null };
-let technitiumDnsCache = { ts: 0, data: { byIp: new Map(), byDomain: new Map(), byDomainPorts: new Map(), source: 'none' } };
+let dnsIndexCache = { ts: 0, data: { byIp: new Map(), byDomain: new Map(), byDomainPorts: new Map(), source: 'none', provider: 'none' } };
+
+function emptyDnsIndex(source = 'none', provider = 'none') {
+  return { byIp: new Map(), byDomain: new Map(), byDomainPorts: new Map(), source, provider };
+}
 
 function haveTechnitiumConfig() {
   return Boolean(TECHNITIUM_BASE_URL && (TECHNITIUM_TOKEN || (TECHNITIUM_USER && TECHNITIUM_PASS)));
+}
+
+function haveCustomDnsConfig() {
+  return Boolean(DNS_API_URL);
+}
+
+function resolveActiveDnsProvider() {
+  if (DNS_PROVIDER) return DNS_PROVIDER;
+  if (haveTechnitiumConfig()) return 'technitium';
+  if (haveCustomDnsConfig()) return 'custom';
+  return 'none';
+}
+
+function isTechnitiumDnsSource(index) {
+  return String(index?.source || '').startsWith('technitium');
+}
+
+function buildDnsConfigHints(provider) {
+  if (provider === 'technitium') {
+    return {
+      missingConfig: 'Configurer TECHNITIUM_TOKEN ou TECHNITIUM_USER+TECHNITIUM_PASS (et TECHNITIUM_BASE_URL).',
+      sourceError: 'Verifier URL, credentials et accessibilite API Technitium.',
+      disabled: 'Activer le provider via DNS_PROVIDER=technitium ou renseigner TECHNITIUM_*.'
+    };
+  }
+  if (provider === 'custom') {
+    return {
+      missingConfig: 'Configurer DNS_API_URL (et DNS_API_TOKEN si requis).',
+      sourceError: 'Verifier DNS_API_URL, token Bearer et contrat JSON byIp/byDomain/byDomainPorts.',
+      disabled: 'Activer DNS_PROVIDER=custom et exposer une API DNS compatible.'
+    };
+  }
+  return {
+    missingConfig: 'Aucun provider DNS actif (mode none).',
+    sourceError: 'Aucun provider DNS actif.',
+    disabled: 'Configurer DNS_PROVIDER=technitium|custom si la decouverte DNS est requise.'
+  };
+}
+
+async function getDnsConfigCheck() {
+  const provider = resolveActiveDnsProvider();
+  const hints = buildDnsConfigHints(provider);
+  const technitiumConfigReady = haveTechnitiumConfig();
+  const customConfigReady = haveCustomDnsConfig();
+
+  const configReady = provider === 'technitium'
+    ? technitiumConfigReady
+    : (provider === 'custom' ? customConfigReady : true);
+
+  const index = await getDnsIndex();
+  const source = String(index?.source || 'none');
+  const healthy = source !== 'error' && source !== 'disabled';
+
+  let recommendation = null;
+  if (!configReady) {
+    recommendation = hints.missingConfig;
+  } else if (source === 'error') {
+    recommendation = hints.sourceError;
+  } else if (source === 'disabled') {
+    recommendation = hints.disabled;
+  }
+
+  return {
+    ok: true,
+    provider,
+    source,
+    healthy,
+    configReady,
+    recommendation,
+    config: {
+      dnsProviderEnv: DNS_PROVIDER || null,
+      dnsApiUrl: DNS_API_URL || null,
+      dnsApiTokenPresent: !!DNS_API_TOKEN,
+      technitium: {
+        baseUrl: TECHNITIUM_BASE_URL || null,
+        tokenPresent: !!TECHNITIUM_TOKEN,
+        userPresent: !!TECHNITIUM_USER,
+        passPresent: !!TECHNITIUM_PASS,
+        totpPresent: !!TECHNITIUM_TOTP,
+        zoneSuffix: TECHNITIUM_ZONE_SUFFIX || null
+      }
+    }
+  };
 }
 
 let technitiumSessionCache = { token: null, ts: 0 };
@@ -1839,6 +1938,100 @@ async function technitiumApiGet(pathname, query = {}) {
   const token = await getTechnitiumAuthToken();
   if (!token) throw new Error('Technitium auth indisponible (token ou user/pass requis)');
   return technitiumRequestRaw(pathname, { token, ...query });
+}
+
+function customDnsRequestRaw() {
+  if (!DNS_API_URL) throw new Error('DNS_API_URL manquant');
+  const url = new URL(DNS_API_URL);
+
+  return new Promise((resolve, reject) => {
+    const isHttps = url.protocol === 'https:';
+    const mod = isHttps ? https : http;
+    const req = mod.request({
+      hostname: url.hostname,
+      port: url.port ? parseInt(url.port, 10) : (isHttps ? 443 : 80),
+      path: `${url.pathname}${url.search}`,
+      method: 'GET',
+      timeout: 5000,
+      rejectUnauthorized: false,
+      headers: {
+        ...(DNS_API_TOKEN ? { Authorization: `Bearer ${DNS_API_TOKEN}` } : {}),
+        Accept: 'application/json'
+      }
+    }, (res) => {
+      let raw = '';
+      res.on('data', (c) => { raw += c; });
+      res.on('end', () => {
+        if ((res.statusCode || 0) < 200 || (res.statusCode || 0) >= 300) {
+          return reject(new Error(`Custom DNS API HTTP ${res.statusCode}: ${raw.slice(0, 200)}`));
+        }
+
+        try {
+          const json = JSON.parse(raw || '{}');
+          resolve(json);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Custom DNS API timeout')); });
+    req.end();
+  });
+}
+
+function addToMapSet(map, key, value) {
+  if (!key || !value) return;
+  if (!map.has(key)) map.set(key, new Set());
+  map.get(key).add(value);
+}
+
+function normalizeCustomDnsIndexPayload(payload = {}) {
+  const byIp = new Map();
+  const byDomain = new Map();
+  const byDomainPorts = new Map();
+
+  const srcByIp = payload?.byIp && typeof payload.byIp === 'object' ? payload.byIp : {};
+  Object.entries(srcByIp).forEach(([ip, domains]) => {
+    if (!isIPv4(ip) || !Array.isArray(domains)) return;
+    domains.forEach((d) => {
+      const domain = normalizeHostname(d);
+      if (!domain) return;
+      addToMapSet(byIp, ip, domain);
+      addToMapSet(byDomain, domain, ip);
+    });
+  });
+
+  const srcByDomain = payload?.byDomain && typeof payload.byDomain === 'object' ? payload.byDomain : {};
+  Object.entries(srcByDomain).forEach(([domainRaw, ips]) => {
+    const domain = normalizeHostname(domainRaw);
+    if (!domain || !Array.isArray(ips)) return;
+    ips.forEach((ip) => {
+      if (!isIPv4(ip)) return;
+      addToMapSet(byDomain, domain, ip);
+      addToMapSet(byIp, ip, domain);
+    });
+  });
+
+  const srcByDomainPorts = payload?.byDomainPorts && typeof payload.byDomainPorts === 'object' ? payload.byDomainPorts : {};
+  Object.entries(srcByDomainPorts).forEach(([domainRaw, ports]) => {
+    const domain = normalizeHostname(domainRaw);
+    if (!domain || !Array.isArray(ports)) return;
+    ports.forEach((p) => {
+      const port = Number(p);
+      if (!Number.isFinite(port) || port <= 0 || port > 65535) return;
+      addDomainPortMapping(byDomainPorts, domain, port);
+    });
+  });
+
+  return {
+    byIp,
+    byDomain,
+    byDomainPorts,
+    source: String(payload?.source || 'custom-api'),
+    provider: 'custom',
+    zones: Number(payload?.zones || 0)
+  };
 }
 
 function toFqdnFromTechnitiumName(name, zone) {
@@ -1933,13 +2126,8 @@ function applyTechnitiumCnames(records, zone, byIp, byDomain) {
 }
 
 async function getTechnitiumDnsIndex() {
-  const now = Date.now();
-  if (technitiumDnsCache.data && (now - technitiumDnsCache.ts) < 30_000) return technitiumDnsCache.data;
-
   if (!haveTechnitiumConfig()) {
-    const none = { byIp: new Map(), byDomain: new Map(), byDomainPorts: new Map(), source: 'disabled' };
-    technitiumDnsCache = { ts: now, data: none };
-    return none;
+    return emptyDnsIndex('disabled', 'technitium');
   }
 
   try {
@@ -1967,14 +2155,46 @@ async function getTechnitiumDnsIndex() {
       parseTechnitiumSrvRecords(records, zone, byDomainPorts);
     }
 
-    const data = { byIp, byDomain, byDomainPorts, source: 'technitium-api', zones: wantedZones.length };
-    technitiumDnsCache = { ts: now, data };
-    return data;
+    return { byIp, byDomain, byDomainPorts, source: 'technitium-api', provider: 'technitium', zones: wantedZones.length };
   } catch {
-    const fallback = { byIp: new Map(), byDomain: new Map(), byDomainPorts: new Map(), source: 'error' };
-    technitiumDnsCache = { ts: now, data: fallback };
-    return fallback;
+    return emptyDnsIndex('error', 'technitium');
   }
+}
+
+async function getCustomDnsIndex() {
+  if (!haveCustomDnsConfig()) {
+    return emptyDnsIndex('disabled', 'custom');
+  }
+
+  try {
+    const json = await customDnsRequestRaw();
+    const payload = json?.data && typeof json.data === 'object' ? json.data : json;
+    return normalizeCustomDnsIndexPayload(payload);
+  } catch {
+    return emptyDnsIndex('error', 'custom');
+  }
+}
+
+async function getDnsIndex() {
+  const now = Date.now();
+  if (dnsIndexCache.data && (now - dnsIndexCache.ts) < 30_000) return dnsIndexCache.data;
+
+  const provider = resolveActiveDnsProvider();
+  let data;
+  if (provider === 'technitium') {
+    data = await getTechnitiumDnsIndex();
+  } else if (provider === 'custom') {
+    data = await getCustomDnsIndex();
+  } else {
+    data = emptyDnsIndex('disabled', 'none');
+  }
+
+  const finalData = {
+    ...data,
+    provider: data?.provider || provider,
+  };
+  dnsIndexCache = { ts: now, data: finalData };
+  return finalData;
 }
 
 async function getMergedData(forceRefresh = false) {
@@ -2008,7 +2228,7 @@ async function getMergedData(forceRefresh = false) {
     };
   }));
 
-  const dnsIndex = await getTechnitiumDnsIndex();
+  const dnsIndex = await getDnsIndex();
   const autoServices = await buildAutoDiscoveredServices(containers, services, base.categories || [], dnsIndex);
   const mergedServices = [...services, ...autoServices];
 
@@ -2686,7 +2906,10 @@ app.get('/api/proxmox/watchers', (req, res) => {
 // Debug DNS Technitium utilisé pour la découverte auto
 app.get('/api/dns/technitium', async (req, res) => {
   try {
-    const index = await getTechnitiumDnsIndex();
+    const activeProvider = resolveActiveDnsProvider();
+    const index = activeProvider === 'technitium'
+      ? await getDnsIndex()
+      : emptyDnsIndex('disabled', activeProvider);
     const byIp = {};
     index.byIp.forEach((domains, ip) => { byIp[ip] = Array.from(domains).sort(); });
     const authMode = TECHNITIUM_TOKEN
@@ -2695,11 +2918,46 @@ app.get('/api/dns/technitium', async (req, res) => {
     res.json({
       ok: true,
       source: index.source,
+      provider: index.provider || activeProvider,
       authMode,
       zones: index.zones || 0,
       countIps: Object.keys(byIp).length,
       byIp
     });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e?.message || e) });
+  }
+});
+
+// Statut DNS provider-agnostic utilisé pour les audits/readiness
+app.get('/api/dns/status', async (req, res) => {
+  try {
+    const provider = resolveActiveDnsProvider();
+    const index = await getDnsIndex();
+    const byIp = {};
+    index.byIp.forEach((domains, ip) => { byIp[ip] = Array.from(domains).sort(); });
+
+    const authMode = provider === 'technitium'
+      ? (TECHNITIUM_TOKEN ? 'static-token' : ((TECHNITIUM_USER && TECHNITIUM_PASS) ? 'user-pass' : 'none'))
+      : (provider === 'custom' ? (DNS_API_TOKEN ? 'bearer-token' : 'none') : 'none');
+
+    res.json({
+      ok: true,
+      provider,
+      source: index.source,
+      authMode,
+      zones: index.zones || 0,
+      countIps: Object.keys(byIp).length,
+      byIp
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e?.message || e) });
+  }
+});
+
+app.get('/api/dns/config-check', async (req, res) => {
+  try {
+    res.json(await getDnsConfigCheck());
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
