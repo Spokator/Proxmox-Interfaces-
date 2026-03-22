@@ -161,3 +161,24 @@ See `CONTRIBUTING.md`.
 ## 10) Architecture
 
 - Technical architecture overview: `docs/ARCHITECTURE.md`
+
+## 11) Main branch protection
+
+This repository should keep `main` protected.
+
+Current goal:
+- no force-push on `main`,
+- no branch deletion,
+- pull request reviews required,
+- required status checks before merge.
+
+Automated setup script:
+
+```powershell
+$env:GITHUB_TOKEN = "<admin-token>"
+./deploy/set-branch-protection.ps1 -Repo "Spokator/Proxmox-Interfaces-" -Branch "main"
+```
+
+Notes:
+- The token must have repository admin rights to configure branch protection.
+- If your token is read/write only (without admin scope), GitHub API returns 403.
