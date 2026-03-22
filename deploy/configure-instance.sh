@@ -13,9 +13,13 @@ PRESET_PORT=""
 PRESET_PVE_HOST=""
 PRESET_PVE_PORT=""
 PRESET_PVE_TOKEN_ID=""
+PRESET_PVE_TOKEN_NAME=""
 PRESET_PVE_TOKEN_SECRET=""
 PRESET_TECHNITIUM_BASE_URL=""
 PRESET_TECHNITIUM_ZONE_SUFFIX=""
+PRESET_DNS_PROVIDER=""
+PRESET_DNS_API_URL=""
+PRESET_DNS_API_TOKEN=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -39,8 +43,24 @@ while [[ $# -gt 0 ]]; do
       PRESET_PVE_TOKEN_ID="$2"
       shift 2
       ;;
+    --pve-token-name)
+      PRESET_PVE_TOKEN_NAME="$2"
+      shift 2
+      ;;
     --pve-token-secret)
       PRESET_PVE_TOKEN_SECRET="$2"
+      shift 2
+      ;;
+    --dns-provider)
+      PRESET_DNS_PROVIDER="$2"
+      shift 2
+      ;;
+    --dns-api-url)
+      PRESET_DNS_API_URL="$2"
+      shift 2
+      ;;
+    --dns-api-token)
+      PRESET_DNS_API_TOKEN="$2"
       shift 2
       ;;
     --technitium-base-url)
@@ -66,7 +86,11 @@ Options:
   --pve-host <value>              Preseed PVE_HOST
   --pve-port <value>              Preseed PVE_PORT
   --pve-token-id <value>          Preseed PVE_TOKEN_ID
+  --pve-token-name <value>        Token name if id is provided as user@realm only
   --pve-token-secret <value>      Preseed PVE_TOKEN_SECRET
+  --dns-provider <none|technitium|custom>
+  --dns-api-url <value>           For custom DNS integration
+  --dns-api-token <value>         For custom DNS integration
   --technitium-base-url <value>   Preseed TECHNITIUM_BASE_URL
   --technitium-zone-suffix <val>  Preseed TECHNITIUM_ZONE_SUFFIX
 EOF
@@ -146,6 +170,46 @@ normalize_mode() {
     m|manual|manuel) echo "manual" ;;
     *) echo "manual" ;;
   esac
+}
+
+normalize_dns_provider() {
+  local p
+  p="$(echo "$1" | tr '[:upper:]' '[:lower:]')"
+  case "$p" in
+    ""|none|no|off|disabled) echo "none" ;;
+    technitium|tech) echo "technitium" ;;
+    custom|generic|api) echo "custom" ;;
+    *) echo "none" ;;
+  esac
+}
+
+sanitize_single_line() {
+  printf '%s' "$1" | tr -d '\r\n'
+}
+
+ensure_token_id_format() {
+  local token_id="$1"
+  local token_name="$2"
+
+  if [[ "$token_id" == *"!"* ]]; then
+    echo "$token_id"
+    return 0
+  fi
+
+  if [[ "$token_id" == *@* ]]; then
+    if [[ -z "$token_name" ]]; then
+      return 1
+    fi
+    echo "${token_id}!${token_name}"
+    return 0
+  fi
+
+  return 1
+}
+
+is_valid_token_id() {
+  local token_id="$1"
+  [[ "$token_id" == *@*'!'* ]]
 }
 
 default_gateway_ip() {
@@ -228,14 +292,18 @@ validate_pve_credentials() {
   fi
 
   local url="https://${host}:${port}/api2/json/version"
-  local http_code
-  http_code=$(curl -k -sS \
+  local http_code="000"
+  local curl_out
+  curl_out=$(curl -k -sS \
     --connect-timeout 5 \
     --max-time 12 \
     -H "Authorization: PVEAPIToken=${token_id}=${token_secret}" \
     -o /tmp/proxmox-interfaces-pve-check.json \
     -w "%{http_code}" \
-    "$url" || echo "000")
+    "$url" || true)
+  if [[ -n "$curl_out" ]]; then
+    http_code="$curl_out"
+  fi
 
   if [[ "$http_code" == "200" ]]; then
     if grep -q '"data"' /tmp/proxmox-interfaces-pve-check.json 2>/dev/null; then
@@ -253,6 +321,52 @@ validate_pve_credentials() {
   return 1
 }
 
+configure_dns_settings() {
+  local mode="$1"
+  local provider_default="$2"
+  local provider=""
+
+  if [[ "$mode" == "manual" ]]; then
+    provider="$(prompt_default "DNS provider (none|technitium|custom)" "$provider_default")"
+  else
+    if [[ "$NON_INTERACTIVE" == "1" ]]; then
+      provider="$provider_default"
+    else
+      provider="$(prompt_default "DNS provider (none|technitium|custom)" "$provider_default")"
+    fi
+  fi
+
+  DNS_PROVIDER="$(normalize_dns_provider "$provider")"
+
+  if [[ "$DNS_PROVIDER" == "technitium" ]]; then
+    if [[ "$NON_INTERACTIVE" == "1" && "$mode" != "manual" ]]; then
+      TECHNITIUM_BASE_URL="${EXISTING_TECHNITIUM_BASE_URL:-http://10.0.0.53:5380}"
+      TECHNITIUM_ZONE_SUFFIX="${EXISTING_TECHNITIUM_ZONE_SUFFIX:-.internal}"
+    else
+      TECHNITIUM_BASE_URL="$(prompt_default "Technitium base URL" "${EXISTING_TECHNITIUM_BASE_URL:-http://10.0.0.53:5380}")"
+      TECHNITIUM_ZONE_SUFFIX="$(prompt_default "Technitium zone suffix" "${EXISTING_TECHNITIUM_ZONE_SUFFIX:-.internal}")"
+    fi
+    DNS_API_URL=""
+    DNS_API_TOKEN=""
+  elif [[ "$DNS_PROVIDER" == "custom" ]]; then
+    if [[ "$NON_INTERACTIVE" == "1" && "$mode" != "manual" ]]; then
+      DNS_API_URL="${EXISTING_DNS_API_URL:-http://dns-api.local}"
+      DNS_API_TOKEN="${EXISTING_DNS_API_TOKEN:-}"
+    else
+      DNS_API_URL="$(prompt_default "Custom DNS API URL" "${EXISTING_DNS_API_URL:-http://dns-api.local}")"
+      DNS_API_TOKEN="$(prompt_secret "Custom DNS API token" "${EXISTING_DNS_API_TOKEN:-}")"
+    fi
+    TECHNITIUM_BASE_URL=""
+    TECHNITIUM_ZONE_SUFFIX="${EXISTING_TECHNITIUM_ZONE_SUFFIX:-.internal}"
+  else
+    DNS_PROVIDER="none"
+    DNS_API_URL=""
+    DNS_API_TOKEN=""
+    TECHNITIUM_BASE_URL=""
+    TECHNITIUM_ZONE_SUFFIX="${EXISTING_TECHNITIUM_ZONE_SUFFIX:-.internal}"
+  fi
+}
+
 write_env_and_restart() {
   cat > "$ENV_FILE" <<EOF
 PORT=${PORT}
@@ -265,6 +379,10 @@ PVE_TOKEN_SECRET=${PVE_TOKEN_SECRET}
 PVE_WATCH_TASKS_ENABLED=true
 PVE_WATCH_SYSLOG_ENABLED=true
 PVE_WATCH_INTERVAL_MS=20000
+
+DNS_PROVIDER=${DNS_PROVIDER}
+DNS_API_URL=${DNS_API_URL}
+DNS_API_TOKEN=${DNS_API_TOKEN}
 
 TECHNITIUM_BASE_URL=${TECHNITIUM_BASE_URL}
 TECHNITIUM_TOKEN=
@@ -303,13 +421,29 @@ run_manual_configuration() {
     PORT="$(prompt_default "App port" "${EXISTING_PORT:-3000}")"
     PVE_HOST="$(prompt_default "Proxmox host/IP" "${EXISTING_PVE_HOST:-10.0.0.10}")"
     PVE_PORT="$(prompt_default "Proxmox API port" "${EXISTING_PVE_PORT:-8006}")"
-    PVE_TOKEN_ID="$(prompt_default "Proxmox token id" "${EXISTING_PVE_TOKEN_ID:-api-user@pve!proxmox-interfaces}")"
+    PVE_TOKEN_ID="$(prompt_default "Proxmox token id (user@realm!tokenname)" "${EXISTING_PVE_TOKEN_ID:-api-user@pve!proxmox-interfaces}")"
     PVE_TOKEN_SECRET="$(prompt_secret "Proxmox token secret" "${EXISTING_PVE_TOKEN_SECRET:-}")"
-    TECHNITIUM_BASE_URL="$(prompt_default "Technitium base URL" "${EXISTING_TECHNITIUM_BASE_URL:-http://10.0.0.53:5380}")"
-    TECHNITIUM_ZONE_SUFFIX="$(prompt_default "Technitium zone suffix" "${EXISTING_TECHNITIUM_ZONE_SUFFIX:-.internal}")"
+
+    PVE_HOST="$(sanitize_single_line "$PVE_HOST")"
+    PVE_PORT="$(sanitize_single_line "$PVE_PORT")"
+    PVE_TOKEN_ID="$(sanitize_single_line "$PVE_TOKEN_ID")"
+    PVE_TOKEN_SECRET="$(sanitize_single_line "$PVE_TOKEN_SECRET")"
+
+    if [[ "$PVE_TOKEN_ID" != *"!"* && "$PVE_TOKEN_ID" == *@* ]]; then
+      PVE_TOKEN_NAME="$(prompt_default "Proxmox token name" "${PRESET_PVE_TOKEN_NAME:-proxmox-interfaces}")"
+      PVE_TOKEN_NAME="$(sanitize_single_line "$PVE_TOKEN_NAME")"
+      PVE_TOKEN_ID="$(ensure_token_id_format "$PVE_TOKEN_ID" "$PVE_TOKEN_NAME" || true)"
+    fi
+
+    configure_dns_settings "manual" "${EXISTING_DNS_PROVIDER:-none}"
 
     if [[ -z "$PVE_HOST" || -z "$PVE_TOKEN_ID" || -z "$PVE_TOKEN_SECRET" ]]; then
       warn "PVE_HOST, PVE_TOKEN_ID and PVE_TOKEN_SECRET are required."
+      continue
+    fi
+
+    if ! is_valid_token_id "$PVE_TOKEN_ID"; then
+      warn "PVE_TOKEN_ID format invalid. Expected user@realm!tokenname"
       continue
     fi
 
@@ -320,8 +454,15 @@ run_manual_configuration() {
     echo "  PVE_PORT=${PVE_PORT}"
     echo "  PVE_TOKEN_ID=${PVE_TOKEN_ID}"
     echo "  PVE_TOKEN_SECRET=$(mask_secret "$PVE_TOKEN_SECRET")"
-    echo "  TECHNITIUM_BASE_URL=${TECHNITIUM_BASE_URL}"
-    echo "  TECHNITIUM_ZONE_SUFFIX=${TECHNITIUM_ZONE_SUFFIX}"
+    echo "  DNS_PROVIDER=${DNS_PROVIDER}"
+    if [[ "$DNS_PROVIDER" == "technitium" ]]; then
+      echo "  TECHNITIUM_BASE_URL=${TECHNITIUM_BASE_URL}"
+      echo "  TECHNITIUM_ZONE_SUFFIX=${TECHNITIUM_ZONE_SUFFIX}"
+    fi
+    if [[ "$DNS_PROVIDER" == "custom" ]]; then
+      echo "  DNS_API_URL=${DNS_API_URL}"
+      echo "  DNS_API_TOKEN=$(mask_secret "$DNS_API_TOKEN")"
+    fi
     echo ""
 
     if prompt_yes_no "Validate Proxmox API credentials now?" "Y"; then
@@ -353,11 +494,11 @@ run_manual_configuration() {
 }
 
 run_auto_configuration() {
-  local gw dns_ip auto_host
+  local gw dns_ip auto_host dns_provider_default
 
   gw="$(default_gateway_ip || true)"
   dns_ip="$(default_dns_ip || true)"
-  auto_host="${gw:-10.0.0.10}"
+  auto_host="${EXISTING_PVE_HOST:-10.0.0.10}"
 
   PORT="${PRESET_PORT:-${EXISTING_PORT:-3000}}"
   PVE_HOST="${PRESET_PVE_HOST:-${EXISTING_PVE_HOST:-$auto_host}}"
@@ -365,17 +506,55 @@ run_auto_configuration() {
   PVE_TOKEN_ID="${PRESET_PVE_TOKEN_ID:-${EXISTING_PVE_TOKEN_ID:-api-user@pve!proxmox-interfaces}}"
   PVE_TOKEN_SECRET="${PRESET_PVE_TOKEN_SECRET:-${EXISTING_PVE_TOKEN_SECRET:-}}"
 
-  if [[ -n "${PRESET_TECHNITIUM_BASE_URL:-}" ]]; then
-    TECHNITIUM_BASE_URL="$PRESET_TECHNITIUM_BASE_URL"
-  elif [[ -n "${EXISTING_TECHNITIUM_BASE_URL:-}" ]]; then
-    TECHNITIUM_BASE_URL="$EXISTING_TECHNITIUM_BASE_URL"
-  elif [[ -n "$dns_ip" ]]; then
-    TECHNITIUM_BASE_URL="http://${dns_ip}:5380"
-  else
-    TECHNITIUM_BASE_URL="http://10.0.0.53:5380"
+  if [[ "$NON_INTERACTIVE" != "1" ]]; then
+    PVE_HOST="$(prompt_default "Proxmox host/IP" "$PVE_HOST")"
+    PVE_PORT="$(prompt_default "Proxmox API port" "$PVE_PORT")"
+    PVE_TOKEN_ID="$(prompt_default "Proxmox token id (user@realm!tokenname)" "$PVE_TOKEN_ID")"
   fi
 
-  TECHNITIUM_ZONE_SUFFIX="${PRESET_TECHNITIUM_ZONE_SUFFIX:-${EXISTING_TECHNITIUM_ZONE_SUFFIX:-.internal}}"
+  PVE_HOST="$(sanitize_single_line "$PVE_HOST")"
+  PVE_PORT="$(sanitize_single_line "$PVE_PORT")"
+  PVE_TOKEN_ID="$(sanitize_single_line "$PVE_TOKEN_ID")"
+  PVE_TOKEN_SECRET="$(sanitize_single_line "$PVE_TOKEN_SECRET")"
+
+  if [[ "$PVE_TOKEN_ID" != *"!"* && "$PVE_TOKEN_ID" == *@* ]]; then
+    if [[ "$NON_INTERACTIVE" == "1" ]]; then
+      PVE_TOKEN_ID="$(ensure_token_id_format "$PVE_TOKEN_ID" "${PRESET_PVE_TOKEN_NAME:-proxmox-interfaces}" || true)"
+    else
+      PVE_TOKEN_NAME="$(prompt_default "Proxmox token name" "${PRESET_PVE_TOKEN_NAME:-proxmox-interfaces}")"
+      PVE_TOKEN_NAME="$(sanitize_single_line "$PVE_TOKEN_NAME")"
+      PVE_TOKEN_ID="$(ensure_token_id_format "$PVE_TOKEN_ID" "$PVE_TOKEN_NAME" || true)"
+    fi
+  fi
+
+  if [[ -n "${PRESET_DNS_PROVIDER:-}" ]]; then
+    dns_provider_default="$PRESET_DNS_PROVIDER"
+  elif [[ -n "${EXISTING_DNS_PROVIDER:-}" ]]; then
+    dns_provider_default="$EXISTING_DNS_PROVIDER"
+  elif [[ -n "${EXISTING_TECHNITIUM_BASE_URL:-}" ]]; then
+    dns_provider_default="technitium"
+  else
+    dns_provider_default="none"
+  fi
+
+  if [[ -n "${PRESET_TECHNITIUM_BASE_URL:-}" ]]; then
+    EXISTING_TECHNITIUM_BASE_URL="$PRESET_TECHNITIUM_BASE_URL"
+  elif [[ -z "${EXISTING_TECHNITIUM_BASE_URL:-}" && -n "$dns_ip" ]]; then
+    EXISTING_TECHNITIUM_BASE_URL="http://${dns_ip}:5380"
+  fi
+
+  if [[ -n "${PRESET_TECHNITIUM_ZONE_SUFFIX:-}" ]]; then
+    EXISTING_TECHNITIUM_ZONE_SUFFIX="$PRESET_TECHNITIUM_ZONE_SUFFIX"
+  fi
+
+  if [[ -n "${PRESET_DNS_API_URL:-}" ]]; then
+    EXISTING_DNS_API_URL="$PRESET_DNS_API_URL"
+  fi
+  if [[ -n "${PRESET_DNS_API_TOKEN:-}" ]]; then
+    EXISTING_DNS_API_TOKEN="$PRESET_DNS_API_TOKEN"
+  fi
+
+  configure_dns_settings "auto" "$dns_provider_default"
 
   if [[ -z "$PVE_TOKEN_SECRET" ]]; then
     if [[ "$NON_INTERACTIVE" == "1" ]]; then
@@ -397,9 +576,26 @@ run_auto_configuration() {
   echo "  PVE_PORT=${PVE_PORT}"
   echo "  PVE_TOKEN_ID=${PVE_TOKEN_ID}"
   echo "  PVE_TOKEN_SECRET=$(mask_secret "$PVE_TOKEN_SECRET")"
-  echo "  TECHNITIUM_BASE_URL=${TECHNITIUM_BASE_URL}"
-  echo "  TECHNITIUM_ZONE_SUFFIX=${TECHNITIUM_ZONE_SUFFIX}"
+  echo "  DNS_PROVIDER=${DNS_PROVIDER}"
+  if [[ "$DNS_PROVIDER" == "technitium" ]]; then
+    echo "  TECHNITIUM_BASE_URL=${TECHNITIUM_BASE_URL}"
+    echo "  TECHNITIUM_ZONE_SUFFIX=${TECHNITIUM_ZONE_SUFFIX}"
+  fi
+  if [[ "$DNS_PROVIDER" == "custom" ]]; then
+    echo "  DNS_API_URL=${DNS_API_URL}"
+    echo "  DNS_API_TOKEN=$(mask_secret "$DNS_API_TOKEN")"
+  fi
   echo ""
+
+  if ! is_valid_token_id "$PVE_TOKEN_ID"; then
+    err "PVE_TOKEN_ID format invalid. Expected user@realm!tokenname"
+    if [[ "$NON_INTERACTIVE" == "1" ]]; then
+      exit 1
+    fi
+    warn "Switching to manual mode to fix token format."
+    run_manual_configuration
+    return
+  fi
 
   if ! validate_pve_credentials "$PVE_HOST" "$PVE_PORT" "$PVE_TOKEN_ID" "$PVE_TOKEN_SECRET"; then
     if [[ "$NON_INTERACTIVE" == "1" ]]; then
@@ -432,8 +628,19 @@ EXISTING_PVE_HOST="$(get_env_value "PVE_HOST" "$ENV_FILE" || true)"
 EXISTING_PVE_PORT="$(get_env_value "PVE_PORT" "$ENV_FILE" || true)"
 EXISTING_PVE_TOKEN_ID="$(get_env_value "PVE_TOKEN_ID" "$ENV_FILE" || true)"
 EXISTING_PVE_TOKEN_SECRET="$(get_env_value "PVE_TOKEN_SECRET" "$ENV_FILE" || true)"
+EXISTING_DNS_PROVIDER="$(get_env_value "DNS_PROVIDER" "$ENV_FILE" || true)"
+EXISTING_DNS_API_URL="$(get_env_value "DNS_API_URL" "$ENV_FILE" || true)"
+EXISTING_DNS_API_TOKEN="$(get_env_value "DNS_API_TOKEN" "$ENV_FILE" || true)"
 EXISTING_TECHNITIUM_BASE_URL="$(get_env_value "TECHNITIUM_BASE_URL" "$ENV_FILE" || true)"
 EXISTING_TECHNITIUM_ZONE_SUFFIX="$(get_env_value "TECHNITIUM_ZONE_SUFFIX" "$ENV_FILE" || true)"
+
+if [[ -z "$EXISTING_DNS_PROVIDER" ]]; then
+  if [[ -n "$EXISTING_TECHNITIUM_BASE_URL" ]]; then
+    EXISTING_DNS_PROVIDER="technitium"
+  else
+    EXISTING_DNS_PROVIDER="none"
+  fi
+fi
 
 if [[ "$CONFIG_MODE" == "auto" ]]; then
   run_auto_configuration
