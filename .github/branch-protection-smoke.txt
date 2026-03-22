@@ -1,0 +1,1 @@
+﻿Branch protection validation PR - safe to close
