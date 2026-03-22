@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/ci.yml/badge.svg)](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/ci.yml)
 [![Release](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/release.yml/badge.svg)](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/release.yml)
+[![Security](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/security.yml/badge.svg)](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/security.yml)
+[![CodeQL](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/codeql.yml/badge.svg)](https://github.com/Spokator/Proxmox-Interfaces-/actions/workflows/codeql.yml)
 
 Proxmox-Interfaces is an operations-focused web control plane for Proxmox environments.
 
@@ -31,6 +33,22 @@ curl -fsSL https://YOUR-PUBLIC-BOOTSTRAP/proxmox-interfaces-bootstrap.sh | bash 
   --cores 2 \
   --ram 1024 \
   --disk 12
+```
+
+Production hardening options:
+- add `--system-upgrade` to run apt upgrade inside the CT,
+- add `--manage-ufw` to apply UFW rules inside the CT.
+
+Example:
+
+```bash
+curl -fsSL https://YOUR-PUBLIC-BOOTSTRAP/proxmox-interfaces-bootstrap.sh | bash -s -- \
+  --yes \
+  --artifact-url https://YOUR-PRIVATE-DIST/proxmox-interfaces-latest.tar.gz \
+  --artifact-sha256-url https://YOUR-PRIVATE-DIST/proxmox-interfaces-latest.sha256 \
+  --ctid 190 --name proxmox-interfaces-a --storage local-lvm --bridge vmbr0 --ip dhcp \
+  --cores 2 --ram 1024 --disk 12 \
+  --system-upgrade --manage-ufw
 ```
 
 Interactive mode:
@@ -134,6 +152,53 @@ See `CONTRIBUTING.md`.
 
 - CI runs on push and pull request to `main`.
 - Release workflow runs automatically when pushing a tag like `v1.0.3`.
+- Security workflow runs npm audit and dependency review checks.
+- CodeQL analyzes JavaScript code for security and quality issues.
 - Issue templates are available for bug reports and feature requests.
 - Pull request template enforces validation and deployment impact checks.
 - Dependabot updates npm dependencies and GitHub Actions weekly.
+
+Dependency review note:
+- `dependency-review` runs only if repository variable `ENABLE_DEPENDENCY_REVIEW=true`.
+- Enable it after turning on Dependency graph in repository security settings.
+
+## 10) Architecture
+
+- Technical architecture overview: `docs/ARCHITECTURE.md`
+
+## 11) Maintenance checklist
+
+- Operational maintenance checklist: `docs/MAINTENANCE_CHECKLIST.md`
+
+## 12) Main branch protection
+
+This repository should keep `main` protected.
+
+Current goal:
+- no force-push on `main`,
+- no branch deletion,
+- pull request reviews required,
+- required status checks before merge.
+
+Automated setup script:
+
+```powershell
+$env:GITHUB_TOKEN = "<admin-token>"
+./deploy/set-branch-protection.ps1 -Repo "Spokator/Proxmox-Interfaces-" -Branch "main"
+```
+
+Dry-run verification:
+
+```powershell
+./deploy/set-branch-protection.ps1 -Repo "Spokator/Proxmox-Interfaces-" -Branch "main" -CheckOnly
+```
+
+Default required checks configured by the script:
+- `test`
+- `npm-audit`
+- `Analyze`
+
+Notes:
+- The token must have repository admin rights to configure branch protection.
+- For fine-grained PAT, repository permission `Administration: Read and write` is required.
+- If your token is read/write only (without admin scope), GitHub API returns 403.
