@@ -71,6 +71,8 @@ Important:
 - at the end of `deploy/install.sh`, an interactive prompt can launch this wizard automatically.
 - for automation, control this behavior with `POST_INSTALL_WIZARD=auto|true|false` (default: `auto`).
 - the wizard now validates Proxmox credentials against the API before restarting the service (with explicit confirmation required to skip).
+- the wizard now supports two profiles: `--mode auto` (recommended defaults + validation) and `--mode manual` (full field-by-field input).
+- you can preselect post-install profile with `POST_INSTALL_PROFILE=auto|manual` (default: `auto`).
 
 ## 2) Local development
 
