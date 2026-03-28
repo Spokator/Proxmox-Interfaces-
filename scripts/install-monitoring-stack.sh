@@ -57,7 +57,22 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq ca-certificates curl docker.io docker-compose-plugin
+apt-get install -y -qq ca-certificates curl docker.io
+
+# Compose availability differs across Debian/Proxmox combinations.
+if ! docker compose version >/dev/null 2>&1 && ! command -v docker-compose >/dev/null 2>&1; then
+  apt-get install -y -qq docker-compose-plugin >/dev/null 2>&1 || \
+  apt-get install -y -qq docker-compose >/dev/null 2>&1 || true
+fi
+
+if docker compose version >/dev/null 2>&1; then
+  COMPOSE_CMD=(docker compose)
+elif command -v docker-compose >/dev/null 2>&1; then
+  COMPOSE_CMD=(docker-compose)
+else
+  echo "[ERR] Docker Compose is not available (docker compose / docker-compose)." >&2
+  exit 1
+fi
 
 systemctl enable docker >/dev/null 2>&1 || true
 systemctl restart docker
@@ -70,6 +85,10 @@ mkdir -p \
   "$GRAFANA_DIR/provisioning/datasources" \
   "$GRAFANA_DIR/provisioning/dashboards" \
   "$GRAFANA_DIR/dashboards"
+
+# Grafana container runs as uid/gid 472 by default and needs write access to /var/lib/grafana.
+chown -R 472:472 "$GRAFANA_DIR/data"
+chmod 775 "$GRAFANA_DIR/data"
 
 cat > "$STACK_DIR/.env" <<EOF
 GRAFANA_ADMIN_USER=${GRAFANA_ADMIN_USER}
@@ -225,7 +244,7 @@ cat > "$GRAFANA_DIR/dashboards/proxmox-interfaces-overview.json" <<'EOF'
 EOF
 
 cd "$STACK_DIR"
-docker compose --env-file "$STACK_DIR/.env" up -d
+"${COMPOSE_CMD[@]}" --env-file "$STACK_DIR/.env" up -d
 
 for i in $(seq 1 30); do
   if curl -fsS http://127.0.0.1:9090/-/ready >/dev/null 2>&1; then

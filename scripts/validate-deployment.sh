@@ -109,7 +109,8 @@ echo "[INFO] Validation profile=$PROFILE"
 check_http_ok "http://127.0.0.1:${NGINX_PORT}/api/status" "API status via nginx on :${NGINX_PORT}"
 check_http_ok "http://127.0.0.1:${APP_PORT}/api/status" "API status via node on :${APP_PORT}"
 
-if systemctl list-unit-files | grep -q '^smartctl_exporter\.service'; then
+smartctl_load_state="$(systemctl show -p LoadState --value smartctl_exporter 2>/dev/null || echo not-found)"
+if [[ "$smartctl_load_state" != "not-found" ]]; then
   if systemctl is-active --quiet smartctl_exporter; then
     ok "smartctl_exporter service active"
   else
