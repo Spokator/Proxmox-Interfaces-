@@ -63,6 +63,7 @@ Run this sequence for every release:
 2. Community profile certification
 - Run `deploy/certify-community-profiles.sh` on a Proxmox host for `core,full,pro`.
 - Require PASS on all selected profiles before tagging.
+- Archive exported profile reports and confirm `failures=0` in each report.
 
 3. Version and notes
 - Confirm `package.json` version is correct.

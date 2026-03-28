@@ -7,6 +7,9 @@ Profiles covered:
 - full: app + local Prometheus + Grafana + smartctl exporter
 - pro: app + external monitoring integration hooks
 
+Profile contract reference:
+- `docs/PROFILE_CONTRACTS.md`
+
 ## 1) Prerequisites
 
 - Run on a Proxmox VE host as root.
@@ -35,17 +38,33 @@ Optional flags:
 - `--profiles core,full,pro` to customize matrix
 - `--destroy-existing` to recreate existing CTIDs
 - `--skip-validation` to only install CTs
+- `--report-dir /tmp/proxmox-interfaces-cert` to control host-side report location
+
+Result artifacts:
+- one report per profile is exported on host (`core.report`, `full.report`, `pro.report`)
+- report format:
+  - `profile=<name>`
+  - `failures=<n>`
+  - `warnings=<n>`
+  - `timestamp=<iso8601>`
 
 ## 3) PASS criteria
 
-- core profile: post-setup validator returns PASS.
-- full profile: post-setup validator returns PASS, including:
+- core profile: post-setup validator returns PASS, including API/status endpoints, Proxmox config-check, DNS status/config-check, and power route availability.
+- full profile: all core checks PASS, plus:
+  - smartctl exporter active and metrics reachable
   - Prometheus ready
   - Grafana health
   - provisioned datasource
   - provisioned starter dashboard
   - smartctl target present in Prometheus
-- pro profile: post-setup validator returns PASS for expected profile checks.
+- pro profile: all core checks PASS, plus:
+  - smartctl exporter active and metrics reachable
+  - overview endpoint available
+  - watchers endpoint available
+
+Evidence requirement:
+- each selected profile must show `failures=0` in its exported report file.
 
 ## 4) FAIL handling
 
