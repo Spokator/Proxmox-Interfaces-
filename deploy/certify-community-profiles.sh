@@ -82,7 +82,7 @@ for cmd in pct pveam pvesm ip awk grep sed; do
   command -v "$cmd" >/dev/null 2>&1 || { err "Missing command: $cmd"; exit 1; }
 done
 
-[[ -x "$BOOTSTRAP_SCRIPT" ]] || { err "Bootstrap script not executable: $BOOTSTRAP_SCRIPT"; exit 1; }
+[[ -f "$BOOTSTRAP_SCRIPT" && -r "$BOOTSTRAP_SCRIPT" ]] || { err "Bootstrap script not readable: $BOOTSTRAP_SCRIPT"; exit 1; }
 [[ -n "$ARTIFACT_URL" ]] || { err "Missing --artifact-url"; exit 1; }
 [[ -n "$ARTIFACT_SHA256_URL" ]] || warn "No --artifact-sha256-url provided (integrity verification in bootstrap may be weaker)."
 
