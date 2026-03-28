@@ -165,6 +165,9 @@ Detailed distribution model:
 - Support runbook: `SUPPORT_RUNBOOK.md`
 - Quick diagnosis: `bash /opt/proxmox-interfaces/deploy/diagnose.sh`
 - Support bundle export: `bash /opt/proxmox-interfaces/deploy/support-bundle.sh`
+- Community certification matrix runbook: `docs/COMMUNITY_CERTIFICATION.md`
+- Automated profile certification on Proxmox host:
+  - `bash /opt/proxmox-interfaces/deploy/certify-community-profiles.sh --artifact-url <url> --artifact-sha256-url <url>`
 
 ## 6) Security
 
@@ -184,6 +187,7 @@ Detailed distribution model:
 - `deploy/setup-platform.sh`: complete platform setup orchestrator (auto/manual)
 - `deploy/diagnose.sh`: quick runtime diagnostics
 - `deploy/support-bundle.sh`: support bundle export
+- `deploy/certify-community-profiles.sh`: automated core/full/pro certification runner (Proxmox host)
 - `scripts/install-monitoring-stack.sh`: local Prometheus + Grafana stack installer (profile `full`)
 - `scripts/validate-deployment.sh`: profile-aware deployment validator (core/full/pro)
 - `deploy/publish-github-release.ps1`: release creation helper

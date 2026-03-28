@@ -60,11 +60,15 @@ Run this sequence for every release:
 1. Local validation
 - `npm run ci`
 
-2. Version and notes
+2. Community profile certification
+- Run `deploy/certify-community-profiles.sh` on a Proxmox host for `core,full,pro`.
+- Require PASS on all selected profiles before tagging.
+
+3. Version and notes
 - Confirm `package.json` version is correct.
 - Ensure `release-notes-vX.Y.Z.md` exists and is complete.
 
-3. Release publication check
+4. Release publication check
 - Confirm tag `vX.Y.Z` exists.
 - Confirm release `vX.Y.Z` is created.
 - Confirm these assets exist:
@@ -73,11 +77,11 @@ Run this sequence for every release:
   - `proxmox-interfaces-latest.tar.gz`
   - `proxmox-interfaces-latest.sha256`
 
-4. Governance check
+5. Governance check
 - Confirm `main` branch protection is active.
 - Confirm required status checks are still configured.
 
-5. Documentation check
+6. Documentation check
 - Update README only if behavior changed.
 - Keep installation command examples aligned with reality.
 
