@@ -20,9 +20,15 @@ Do not commit client-specific infrastructure details.
 
 Recommended model: public bootstrap + private release artifact.
 
+Deployment profiles:
+- `--profile core` (default): app only, no embedded monitoring stack.
+- `--profile full`: app + local Prometheus + Grafana in the same CT.
+- `--profile pro`: app CT + external monitoring integration hooks.
+
 ```bash
 curl -fsSL https://YOUR-PUBLIC-BOOTSTRAP/proxmox-interfaces-bootstrap.sh | bash -s -- \
   --yes \
+  --profile core \
   --artifact-url https://YOUR-PRIVATE-DIST/proxmox-interfaces-latest.tar.gz \
   --artifact-sha256-url https://YOUR-PRIVATE-DIST/proxmox-interfaces-latest.sha256 \
   --ctid 190 \
@@ -49,6 +55,16 @@ curl -fsSL https://YOUR-PUBLIC-BOOTSTRAP/proxmox-interfaces-bootstrap.sh | bash 
   --ctid 190 --name proxmox-interfaces-a --storage local-lvm --bridge vmbr0 --ip dhcp \
   --cores 2 --ram 1024 --disk 12 \
   --system-upgrade --manage-ufw
+```
+
+Community helper-style one-liner (full stack in one CT):
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Spokator/Proxmox-Interfaces-/main/deploy/community-install.sh)" -- \
+  --yes \
+  --profile full \
+  --ctid 190 --name proxmox-interfaces-full --storage local-lvm --bridge vmbr0 --ip dhcp \
+  --cores 2 --ram 2048 --disk 16
 ```
 
 Interactive mode:
@@ -84,6 +100,7 @@ Important:
   - `{"byIp":{"10.0.0.20":["svc-a.internal"]},"byDomain":{"svc-a.internal":["10.0.0.20"]},"byDomainPorts":{"svc-a.internal":[80,443]}}`
 - full custom provider contract: `docs/DNS_CUSTOM_PROVIDER_CONTRACT.md`.
 - a full setup orchestrator is available with `deploy/setup-platform.sh` (core config + optional monitoring stack hooks).
+- `deploy/setup-platform.sh` now supports `--profile core|full|pro` and `--install-monitoring-stack auto|true|false`.
 - control full setup prompt with `POST_INSTALL_PLATFORM_SETUP=auto|true|false` (default: `auto`).
 
 ## 2) Local development
@@ -163,6 +180,7 @@ Detailed distribution model:
 - `deploy/setup-platform.sh`: complete platform setup orchestrator (auto/manual)
 - `deploy/diagnose.sh`: quick runtime diagnostics
 - `deploy/support-bundle.sh`: support bundle export
+- `scripts/install-monitoring-stack.sh`: local Prometheus + Grafana stack installer (profile `full`)
 - `deploy/publish-github-release.ps1`: release creation helper
 - `deploy/upload-release-assets.ps1`: release assets uploader
 

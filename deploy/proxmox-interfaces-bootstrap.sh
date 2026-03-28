@@ -11,6 +11,7 @@ WORKDIR="${WORKDIR:-}"
 INSTALLER_REL_PATH="${INSTALLER_REL_PATH:-deploy/proxmox-easy-install.sh}"
 AUTH_HEADER="${AUTH_HEADER:-}"
 GITHUB_TOKEN="${GITHUB_TOKEN:-}"
+PROFILE="${PROFILE:-core}"
 
 SILENT="0"
 AUTO_YES="0"
@@ -32,6 +33,7 @@ Purpose:
   3) Execute deploy/proxmox-easy-install.sh with your CT parameters
 
 Bootstrap options:
+  --profile <core|full|pro>  Deployment profile (default: core)
   --artifact-url <url>         Source archive (.tar.gz/.tgz)
   --artifact-sha256 <hash>     Expected SHA256 hash
   --artifact-sha256-url <url>  URL that returns SHA256 hash (first token used)
@@ -135,6 +137,7 @@ while [[ $# -gt 0 ]]; do
     --workdir) WORKDIR="$2"; shift 2 ;;
     --installer-path) INSTALLER_REL_PATH="$2"; shift 2 ;;
     --auth-header) AUTH_HEADER="$2"; shift 2 ;;
+    --profile) PROFILE="$2"; shift 2 ;;
     --yes) AUTO_YES="1"; shift ;;
     --silent) SILENT="1"; shift ;;
     --skip-checks) SKIP_CHECKS="1"; shift ;;
@@ -162,6 +165,8 @@ fi
 
 if [[ "$AUTO_YES" != "1" && "$INTERACTIVE_MODE" == "1" ]]; then
   info "Interactive mode enabled."
+
+  PROFILE="$(prompt_default "Deployment profile (core|full|pro)" "$PROFILE")"
 
   if [[ -z "$WORKDIR" && -z "$ARTIFACT_URL" ]]; then
     read -r -p "Use local source directory already on host? (y/N): " ans < "$TTY_DEVICE"
@@ -191,6 +196,17 @@ if [[ "$AUTO_YES" != "1" && "$INTERACTIVE_MODE" == "1" ]]; then
   set_forwarded_default "--ram" "$(prompt_default "RAM MB" "1024")"
   set_forwarded_default "--disk" "$(prompt_default "Disk GB" "12")"
 fi
+
+PROFILE="$(echo "$PROFILE" | tr '[:upper:]' '[:lower:]')"
+case "$PROFILE" in
+  core|full|pro) ;;
+  *)
+    err "Invalid --profile: $PROFILE (expected core|full|pro)"
+    exit 1
+    ;;
+esac
+
+set_forwarded_default "--profile" "$PROFILE"
 
 if [[ "$SKIP_CHECKS" != "1" ]]; then
   info "Running preflight checks..."

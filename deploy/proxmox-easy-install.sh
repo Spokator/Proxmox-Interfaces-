@@ -24,6 +24,7 @@ START_NOW="${START_NOW:-1}"
 INSTALL_NOW="${INSTALL_NOW:-1}"
 INSTALL_SYSTEM_UPGRADE="${INSTALL_SYSTEM_UPGRADE:-0}"
 MANAGE_UFW="${MANAGE_UFW:-0}"
+DEPLOY_PROFILE="${DEPLOY_PROFILE:-core}"
 
 usage() {
   cat <<'EOF'
@@ -48,6 +49,7 @@ Options:
   --source <path>             Source project folder on Proxmox host (required for install)
   --system-upgrade            Run apt full upgrade inside CT during install
   --manage-ufw                Configure and enable UFW inside CT
+  --profile <core|full|pro>   Deployment profile (default: core)
   --no-install                Create/start CT only
   --no-start                  Do not start CT after creation
   -h, --help                  Show this help
@@ -77,12 +79,22 @@ while [[ $# -gt 0 ]]; do
     --source) SOURCE_DIR="$2"; shift 2 ;;
     --system-upgrade) INSTALL_SYSTEM_UPGRADE="1"; shift ;;
     --manage-ufw) MANAGE_UFW="1"; shift ;;
+    --profile) DEPLOY_PROFILE="$2"; shift 2 ;;
     --no-install) INSTALL_NOW="0"; shift ;;
     --no-start) START_NOW="0"; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $1"; usage; exit 1 ;;
   esac
 done
+
+DEPLOY_PROFILE="$(echo "$DEPLOY_PROFILE" | tr '[:upper:]' '[:lower:]')"
+case "$DEPLOY_PROFILE" in
+  core|full|pro) ;;
+  *)
+    echo "[ERR] Invalid --profile: $DEPLOY_PROFILE (expected core|full|pro)" >&2
+    exit 1
+    ;;
+esac
 
 if [[ "$(id -u)" != "0" ]]; then
   echo "[ERR] Run as root on Proxmox host." >&2
@@ -190,7 +202,13 @@ if [[ "$INSTALL_NOW" == "1" ]]; then
   rm -f "$TMP_ARCHIVE"
 
   echo "[INFO] Installing app in CT..."
-  pct exec "$CT_ID" -- bash -lc "chmod +x '${APP_DIR}/deploy/install.sh' && INSTALL_SYSTEM_UPGRADE='${INSTALL_SYSTEM_UPGRADE}' MANAGE_UFW='${MANAGE_UFW}' bash '${APP_DIR}/deploy/install.sh'"
+  POST_PLATFORM="false"
+  case "$DEPLOY_PROFILE" in
+    full|pro) POST_PLATFORM="true" ;;
+    *) POST_PLATFORM="false" ;;
+  esac
+
+  pct exec "$CT_ID" -- bash -lc "chmod +x '${APP_DIR}/deploy/install.sh' && INSTALL_SYSTEM_UPGRADE='${INSTALL_SYSTEM_UPGRADE}' MANAGE_UFW='${MANAGE_UFW}' COMMUNITY_PROFILE='${DEPLOY_PROFILE}' POST_INSTALL_STACK_PROFILE='${DEPLOY_PROFILE}' POST_INSTALL_PLATFORM_SETUP='${POST_PLATFORM}' POST_INSTALL_PROFILE='auto' bash '${APP_DIR}/deploy/install.sh'"
 fi
 
 echo "[OK] Done."

@@ -17,6 +17,7 @@ MANAGE_UFW="${MANAGE_UFW:-0}"
 POST_INSTALL_WIZARD="${POST_INSTALL_WIZARD:-auto}"
 POST_INSTALL_PROFILE="${POST_INSTALL_PROFILE:-auto}"
 POST_INSTALL_PLATFORM_SETUP="${POST_INSTALL_PLATFORM_SETUP:-auto}"
+POST_INSTALL_STACK_PROFILE="${POST_INSTALL_STACK_PROFILE:-${COMMUNITY_PROFILE:-core}}"
 
 GREEN='\033[0;32m'; BLUE='\033[0;34m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
@@ -146,9 +147,15 @@ run_post_install_platform_setup() {
   local setup_script="$APP_DIR/deploy/setup-platform.sh"
   local mode
   local profile
+  local stack_profile
 
   mode=$(echo "$POST_INSTALL_PLATFORM_SETUP" | tr '[:upper:]' '[:lower:]')
   profile=$(echo "$POST_INSTALL_PROFILE" | tr '[:upper:]' '[:lower:]')
+  stack_profile=$(echo "$POST_INSTALL_STACK_PROFILE" | tr '[:upper:]' '[:lower:]')
+
+  if [ "$stack_profile" != "core" ] && [ "$stack_profile" != "full" ] && [ "$stack_profile" != "pro" ]; then
+    stack_profile="core"
+  fi
 
   if [ "$profile" != "manual" ] && [ "$profile" != "manuel" ] && [ "$profile" != "auto" ] && [ "$profile" != "automatique" ]; then
     profile="auto"
@@ -172,7 +179,7 @@ run_post_install_platform_setup() {
 
   if [ "$mode" = "1" ] || [ "$mode" = "true" ] || [ "$mode" = "yes" ] || [ "$mode" = "on" ]; then
     step "Setup plateforme complet"
-    bash "$setup_script" --mode "$profile"
+    bash "$setup_script" --mode "$profile" --profile "$stack_profile"
     return 0
   fi
 
@@ -182,7 +189,7 @@ run_post_install_platform_setup() {
   fi
 
   step "Setup plateforme complet"
-  echo -e "${YELLOW}[INFO]${NC} Lancer le setup complet (core + options monitoring) ? [y/N]"
+  echo -e "${YELLOW}[INFO]${NC} Lancer le setup complet (profil stack: ${stack_profile}, core + options monitoring) ? [y/N]"
   local answer=""
   if [ -r /dev/tty ]; then
     read -r answer < /dev/tty || true
@@ -205,7 +212,7 @@ run_post_install_platform_setup() {
     else
       profile="auto"
     fi
-    bash "$setup_script" --mode "$profile"
+    bash "$setup_script" --mode "$profile" --profile "$stack_profile"
   else
     info "Setup plateforme ignoré par l'utilisateur"
   fi
@@ -411,7 +418,7 @@ fi
 # ─── Outils d'exploitation ────────────────────────────────────
 step "Activation des scripts d'exploitation"
 chmod +x "$APP_DIR/deploy/diagnose.sh" "$APP_DIR/deploy/support-bundle.sh" "$APP_DIR/deploy/configure-instance.sh" "$APP_DIR/deploy/setup-platform.sh" 2>/dev/null || true
-chmod +x "$APP_DIR/scripts/install-smartctl-exporter.sh" "$APP_DIR/scripts/configure-prometheus-smartctl.sh" 2>/dev/null || true
+chmod +x "$APP_DIR/scripts/install-smartctl-exporter.sh" "$APP_DIR/scripts/configure-prometheus-smartctl.sh" "$APP_DIR/scripts/install-monitoring-stack.sh" 2>/dev/null || true
 success "Scripts d'exploitation prêts"
 
 # ─── Test final ───────────────────────────────────────────────
