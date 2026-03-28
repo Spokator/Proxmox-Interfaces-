@@ -24,6 +24,23 @@ info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
 success() { echo -e "${GREEN}[OK]${NC} $1"; }
 step()    { echo -e "\n${BLUE}>>> $1${NC}"; }
 
+has_interactive_tty() {
+  [ -e /dev/tty ] && [ -r /dev/tty ] && [ -w /dev/tty ] && tty -s 2>/dev/null
+}
+
+read_tty_line() {
+  local __out_var="$1"
+  local __reply=""
+  if ! has_interactive_tty; then
+    return 1
+  fi
+  if ! read -r __reply < /dev/tty; then
+    return 1
+  fi
+  printf -v "$__out_var" '%s' "$__reply"
+  return 0
+}
+
 ensure_utf8_locale() {
   local target_locale="en_US.UTF-8"
 
@@ -105,8 +122,8 @@ run_post_install_wizard() {
     return 0
   fi
 
-  if [ ! -t 0 ] && [ ! -r /dev/tty ]; then
-    info "Session non interactive: wizard post-install ignoré (POST_INSTALL_WIZARD=auto)"
+  if ! has_interactive_tty; then
+     info "Session non interactive: wizard post-install ignoré (POST_INSTALL_WIZARD=auto)"
     return 0
   fi
 
@@ -114,20 +131,18 @@ run_post_install_wizard() {
   echo -e "${YELLOW}[INFO]${NC} Lancer le wizard interactif maintenant ? [Y/n]"
 
   local answer=""
-  if [ -r /dev/tty ]; then
-    read -r answer < /dev/tty || true
-  else
-    read -r answer || true
+  if ! read_tty_line answer; then
+    info "Impossible de lire une entrée interactive, wizard post-install ignoré"
+    return 0
   fi
   answer=$(echo "$answer" | tr '[:upper:]' '[:lower:]')
 
   if [ -z "$answer" ] || [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "o" ] || [ "$answer" = "oui" ]; then
     echo -e "${YELLOW}[INFO]${NC} Mode de configuration : [A]utomatique (recommandé) / [M]anuel"
     local mode_answer=""
-    if [ -r /dev/tty ]; then
-      read -r mode_answer < /dev/tty || true
-    else
-      read -r mode_answer || true
+    if ! read_tty_line mode_answer; then
+      info "Aucune saisie du mode détectée, wizard post-install ignoré"
+      return 0
     fi
     mode_answer=$(echo "$mode_answer" | tr '[:upper:]' '[:lower:]')
 
@@ -179,32 +194,35 @@ run_post_install_platform_setup() {
 
   if [ "$mode" = "1" ] || [ "$mode" = "true" ] || [ "$mode" = "yes" ] || [ "$mode" = "on" ]; then
     step "Setup plateforme complet"
-    bash "$setup_script" --mode "$profile" --profile "$stack_profile"
+    if has_interactive_tty; then
+      bash "$setup_script" --mode "$profile" --profile "$stack_profile"
+    else
+      # En mode non interactif, désactive explicitement le wizard core pour éviter les prompts /dev/tty.
+      NON_INTERACTIVE=1 RUN_CORE_CONFIG=0 bash "$setup_script" --mode auto --profile "$stack_profile" --non-interactive
+    fi
     return 0
   fi
 
-  if [ ! -t 0 ] && [ ! -r /dev/tty ]; then
-    info "Session non interactive: setup plateforme ignoré (POST_INSTALL_PLATFORM_SETUP=auto)"
+  if ! has_interactive_tty; then
+     info "Session non interactive: setup plateforme ignoré (POST_INSTALL_PLATFORM_SETUP=auto)"
     return 0
   fi
 
   step "Setup plateforme complet"
   echo -e "${YELLOW}[INFO]${NC} Lancer le setup complet (profil stack: ${stack_profile}, core + options monitoring) ? [y/N]"
   local answer=""
-  if [ -r /dev/tty ]; then
-    read -r answer < /dev/tty || true
-  else
-    read -r answer || true
+  if ! read_tty_line answer; then
+    info "Impossible de lire une entrée interactive, setup plateforme ignoré"
+    return 0
   fi
   answer=$(echo "$answer" | tr '[:upper:]' '[:lower:]')
 
   if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "o" ] || [ "$answer" = "oui" ]; then
     echo -e "${YELLOW}[INFO]${NC} Mode setup plateforme : [A]utomatique (recommandé) / [M]anuel"
     local mode_answer=""
-    if [ -r /dev/tty ]; then
-      read -r mode_answer < /dev/tty || true
-    else
-      read -r mode_answer || true
+    if ! read_tty_line mode_answer; then
+      info "Aucune saisie du mode détectée, setup plateforme ignoré"
+      return 0
     fi
     mode_answer=$(echo "$mode_answer" | tr '[:upper:]' '[:lower:]')
     if [ "$mode_answer" = "m" ] || [ "$mode_answer" = "manual" ] || [ "$mode_answer" = "manuel" ]; then
