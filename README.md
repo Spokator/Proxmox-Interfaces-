@@ -22,7 +22,7 @@ Recommended model: public bootstrap + private release artifact.
 
 Deployment profiles:
 - `--profile core` (default): app only, no embedded monitoring stack.
-- `--profile full`: app + local Prometheus + Grafana in the same CT.
+- `--profile full`: app + local Prometheus + Grafana in the same CT, with Grafana datasource/dashboard pre-provisioned.
 - `--profile pro`: app CT + external monitoring integration hooks.
 
 ```bash
@@ -101,6 +101,7 @@ Important:
 - full custom provider contract: `docs/DNS_CUSTOM_PROVIDER_CONTRACT.md`.
 - a full setup orchestrator is available with `deploy/setup-platform.sh` (core config + optional monitoring stack hooks).
 - `deploy/setup-platform.sh` now supports `--profile core|full|pro` and `--install-monitoring-stack auto|true|false`.
+- in `--profile full`, Grafana is auto-provisioned with Prometheus datasource and a starter dashboard.
 - control full setup prompt with `POST_INSTALL_PLATFORM_SETUP=auto|true|false` (default: `auto`).
 
 ## 2) Local development
