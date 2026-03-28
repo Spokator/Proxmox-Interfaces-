@@ -11,6 +11,7 @@ MONITORING_DIR="${MONITORING_DIR:-/opt/monitoring}"
 STACK_DIR="${STACK_DIR:-$MONITORING_DIR/stack}"
 GRAFANA_ADMIN_USER="${GRAFANA_ADMIN_USER:-admin}"
 GRAFANA_ADMIN_PASSWORD="${GRAFANA_ADMIN_PASSWORD:-admin}"
+REPORT_FILE="${REPORT_FILE:-}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -51,6 +52,10 @@ while [[ $# -gt 0 ]]; do
       GRAFANA_ADMIN_PASSWORD="$2"
       shift 2
       ;;
+    --report-file)
+      REPORT_FILE="$2"
+      shift 2
+      ;;
     -h|--help)
       cat <<'EOF'
 Usage: validate-deployment.sh [options]
@@ -65,6 +70,7 @@ Options:
   --monitoring-dir <path>         Monitoring base directory (default: /opt/monitoring)
   --grafana-admin-user <user>     Grafana admin user override
   --grafana-admin-password <pass> Grafana admin password override
+  --report-file <path>            Optional report output file (text)
 EOF
       exit 0
       ;;
@@ -92,6 +98,17 @@ ok() { echo "[OK] $*"; }
 warn() { echo "[WARN] $*"; }
 fail() { echo "[FAIL] $*"; FAILURES=$((FAILURES + 1)); }
 
+http_code() {
+  local url="$1"
+  local method="${2:-GET}"
+  local payload="${3:-}"
+  if [[ -n "$payload" ]]; then
+    curl -sS -o /dev/null -w "%{http_code}" -X "$method" -H "Content-Type: application/json" -d "$payload" "$url" || echo "000"
+  else
+    curl -sS -o /dev/null -w "%{http_code}" -X "$method" "$url" || echo "000"
+  fi
+}
+
 check_http_ok() {
   local url="$1"
   local label="$2"
@@ -103,11 +120,35 @@ check_http_ok() {
 }
 
 FAILURES=0
+WARNINGS=0
 
 echo "[INFO] Validation profile=$PROFILE"
 
 check_http_ok "http://127.0.0.1:${NGINX_PORT}/api/status" "API status via nginx on :${NGINX_PORT}"
 check_http_ok "http://127.0.0.1:${APP_PORT}/api/status" "API status via node on :${APP_PORT}"
+
+check_http_ok "http://127.0.0.1:${NGINX_PORT}/api/proxmox/config-check" "Proxmox config-check endpoint via nginx"
+
+dns_status_body="$(curl -fsS "http://127.0.0.1:${NGINX_PORT}/api/dns/status" 2>/dev/null || true)"
+if [[ -n "$dns_status_body" ]] && echo "$dns_status_body" | grep -q '"ok"[[:space:]]*:[[:space:]]*true'; then
+  ok "DNS status endpoint available"
+else
+  fail "DNS status endpoint unavailable or invalid"
+fi
+
+dns_cfg_body="$(curl -fsS "http://127.0.0.1:${NGINX_PORT}/api/dns/config-check" 2>/dev/null || true)"
+if [[ -n "$dns_cfg_body" ]] && echo "$dns_cfg_body" | grep -q '"ok"[[:space:]]*:[[:space:]]*true'; then
+  ok "DNS config-check endpoint available"
+else
+  fail "DNS config-check endpoint unavailable or invalid"
+fi
+
+power_code="$(http_code "http://127.0.0.1:${NGINX_PORT}/api/proxmox/guests/lxc/0/power" "POST" '{"action":"start"}')"
+if [[ "$power_code" == "404" || "$power_code" == "000" ]]; then
+  fail "Power API route unavailable (code=$power_code)"
+else
+  ok "Power API route available (code=$power_code)"
+fi
 
 smartctl_load_state="$(systemctl show -p LoadState --value smartctl_exporter 2>/dev/null || echo not-found)"
 if [[ "$smartctl_load_state" != "not-found" ]]; then
@@ -119,6 +160,7 @@ if [[ "$smartctl_load_state" != "not-found" ]]; then
   check_http_ok "http://127.0.0.1:${SMARTCTL_PORT}/metrics" "smartctl_exporter metrics on :${SMARTCTL_PORT}"
 else
   if [[ "$PROFILE" == "core" ]]; then
+    WARNINGS=$((WARNINGS + 1))
     warn "smartctl_exporter not installed (expected for core profile)"
   else
     fail "smartctl_exporter not installed"
@@ -150,9 +192,27 @@ if [[ "$PROFILE" == "full" ]]; then
   fi
 fi
 
+if [[ "$PROFILE" == "pro" ]]; then
+  check_http_ok "http://127.0.0.1:${NGINX_PORT}/api/overview" "Overview endpoint via nginx"
+  check_http_ok "http://127.0.0.1:${NGINX_PORT}/api/proxmox/watchers" "Watchers endpoint via nginx"
+fi
+
+if [[ -n "$REPORT_FILE" ]]; then
+  {
+    echo "profile=$PROFILE"
+    echo "failures=$FAILURES"
+    echo "warnings=$WARNINGS"
+    echo "timestamp=$(date -Iseconds)"
+  } >"$REPORT_FILE"
+fi
+
 if [[ "$FAILURES" -gt 0 ]]; then
   echo "[ERR] Validation failed with $FAILURES issue(s)."
   exit 1
 fi
 
-echo "[OK] Validation successful"
+if [[ "$WARNINGS" -gt 0 ]]; then
+  echo "[OK] Validation successful with $WARNINGS warning(s)"
+else
+  echo "[OK] Validation successful"
+fi

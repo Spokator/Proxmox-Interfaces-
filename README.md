@@ -166,8 +166,9 @@ Detailed distribution model:
 - Quick diagnosis: `bash /opt/proxmox-interfaces/deploy/diagnose.sh`
 - Support bundle export: `bash /opt/proxmox-interfaces/deploy/support-bundle.sh`
 - Community certification matrix runbook: `docs/COMMUNITY_CERTIFICATION.md`
+- Profile-by-profile expected behavior contract: `docs/PROFILE_CONTRACTS.md`
 - Automated profile certification on Proxmox host:
-  - `bash /opt/proxmox-interfaces/deploy/certify-community-profiles.sh --artifact-url <url> --artifact-sha256-url <url>`
+  - `bash /opt/proxmox-interfaces/deploy/certify-community-profiles.sh --artifact-url <url> --artifact-sha256-url <url> --report-dir /tmp/proxmox-interfaces-cert`
 
 ## 6) Security
 

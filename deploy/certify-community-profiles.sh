@@ -20,6 +20,8 @@ NAME_PREFIX="${NAME_PREFIX:-proxmox-interfaces-cert}"
 PROFILE_SET="${PROFILE_SET:-core,full,pro}"
 DESTROY_EXISTING="${DESTROY_EXISTING:-0}"
 SKIP_VALIDATION="${SKIP_VALIDATION:-0}"
+RUN_TS="$(date +%Y%m%d-%H%M%S)"
+REPORT_DIR="${REPORT_DIR:-/tmp/proxmox-interfaces-cert-${RUN_TS}}"
 
 usage() {
   cat <<'EOF'
@@ -44,6 +46,7 @@ Options:
   --profiles <csv>                Profiles to run (default: core,full,pro)
   --destroy-existing              Destroy existing CTIDs before install
   --skip-validation               Only install, do not run validator
+  --report-dir <path>             Host directory for profile reports
   -h, --help                      Show help
 EOF
 }
@@ -68,6 +71,7 @@ while [[ $# -gt 0 ]]; do
     --profiles) PROFILE_SET="$2"; shift 2 ;;
     --destroy-existing) DESTROY_EXISTING="1"; shift ;;
     --skip-validation) SKIP_VALIDATION="1"; shift ;;
+    --report-dir) REPORT_DIR="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) err "Unknown option: $1"; usage; exit 1 ;;
   esac
@@ -101,6 +105,12 @@ done
 declare -A profile_ctid
 declare -A profile_name
 declare -A profile_result
+declare -A profile_report
+declare -A profile_failures
+declare -A profile_warnings
+
+mkdir -p "$REPORT_DIR"
+info "Certification reports will be written to: $REPORT_DIR"
 
 index=0
 for profile in "${profiles[@]}"; do
@@ -146,13 +156,31 @@ for profile in "${profiles[@]}"; do
   if [[ "$SKIP_VALIDATION" == "1" ]]; then
     profile_result["$profile"]="SKIPPED"
     ok "Validation skipped for profile=$profile"
+    profile_report["$profile"]="-"
+    profile_failures["$profile"]="-"
+    profile_warnings["$profile"]="-"
   else
-    if pct exec "$ctid" -- bash -lc "bash /opt/proxmox-interfaces/scripts/validate-deployment.sh --profile '$profile'"; then
+    ct_report="/tmp/proxmox-interfaces-validate-${profile}.report"
+    host_report="$REPORT_DIR/${profile}.report"
+    if pct exec "$ctid" -- bash -lc "bash /opt/proxmox-interfaces/scripts/validate-deployment.sh --profile '$profile' --report-file '$ct_report'"; then
       profile_result["$profile"]="PASS"
       ok "Validation PASS for profile=$profile"
     else
       profile_result["$profile"]="FAIL"
       warn "Validation FAIL for profile=$profile"
+    fi
+
+    if pct exec "$ctid" -- bash -lc "test -f '$ct_report' && cat '$ct_report'" >"$host_report"; then
+      profile_report["$profile"]="$host_report"
+      profile_failures["$profile"]="$(awk -F= '/^failures=/{print $2}' "$host_report" | tail -n1)"
+      profile_warnings["$profile"]="$(awk -F= '/^warnings=/{print $2}' "$host_report" | tail -n1)"
+      [[ -n "${profile_failures[$profile]}" ]] || profile_failures["$profile"]="?"
+      [[ -n "${profile_warnings[$profile]}" ]] || profile_warnings["$profile"]="?"
+    else
+      profile_report["$profile"]="(missing)"
+      profile_failures["$profile"]="?"
+      profile_warnings["$profile"]="?"
+      warn "No validation report file retrieved for profile=$profile"
     fi
   fi
 
@@ -163,9 +191,10 @@ echo ""
 echo "=== Certification summary ==="
 failed=0
 for profile in "${profiles[@]}"; do
-  echo "- $profile: ${profile_result[$profile]} (ctid=${profile_ctid[$profile]}, name=${profile_name[$profile]})"
+  echo "- $profile: ${profile_result[$profile]} (ctid=${profile_ctid[$profile]}, name=${profile_name[$profile]}, failures=${profile_failures[$profile]}, warnings=${profile_warnings[$profile]}, report=${profile_report[$profile]})"
   [[ "${profile_result[$profile]}" == "FAIL" ]] && failed=$((failed + 1))
 done
+echo "Reports directory: $REPORT_DIR"
 
 if [[ "$failed" -gt 0 ]]; then
   err "Certification completed with $failed failure(s)."
