@@ -1,6 +1,6 @@
 {
   "name": "proxmox-interfaces",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "description": "Proxmox-Interfaces control plane for Proxmox infrastructure",
   "main": "server.js",
   "scripts": {
