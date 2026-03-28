@@ -417,7 +417,7 @@ fi
 
 # ─── Outils d'exploitation ────────────────────────────────────
 step "Activation des scripts d'exploitation"
-chmod +x "$APP_DIR/deploy/diagnose.sh" "$APP_DIR/deploy/support-bundle.sh" "$APP_DIR/deploy/configure-instance.sh" "$APP_DIR/deploy/setup-platform.sh" 2>/dev/null || true
+chmod +x "$APP_DIR/deploy/diagnose.sh" "$APP_DIR/deploy/support-bundle.sh" "$APP_DIR/deploy/configure-instance.sh" "$APP_DIR/deploy/setup-platform.sh" "$APP_DIR/deploy/certify-community-profiles.sh" 2>/dev/null || true
 chmod +x "$APP_DIR/scripts/install-smartctl-exporter.sh" "$APP_DIR/scripts/configure-prometheus-smartctl.sh" "$APP_DIR/scripts/install-monitoring-stack.sh" "$APP_DIR/scripts/validate-deployment.sh" 2>/dev/null || true
 success "Scripts d'exploitation prêts"
 
@@ -453,6 +453,7 @@ echo -e "    bash ${APP_DIR}/deploy/support-bundle.sh # Bundle support"
 echo -e "    bash ${APP_DIR}/deploy/configure-instance.sh # Wizard .env"
 echo -e "    bash ${APP_DIR}/deploy/setup-platform.sh # Setup complet (auto/manuel)"
 echo -e "    bash ${APP_DIR}/scripts/validate-deployment.sh --profile ${POST_INSTALL_STACK_PROFILE} # Validation stack"
+echo -e "    bash ${APP_DIR}/deploy/certify-community-profiles.sh --artifact-url <url> --artifact-sha256-url <url> # Certification core/full/pro (hote PVE)"
 if ! is_runtime_configured; then
   echo ""
   echo -e "${YELLOW}[INFO]${NC} Inventaire live Proxmox non configuré (.env incomplet)."
