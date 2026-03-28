@@ -78,6 +78,7 @@ After install, inside instance:
 ```bash
 bash /opt/proxmox-interfaces/deploy/configure-instance.sh
 bash /opt/proxmox-interfaces/deploy/setup-platform.sh
+bash /opt/proxmox-interfaces/scripts/validate-deployment.sh --profile core
 bash /opt/proxmox-interfaces/deploy/diagnose.sh
 bash /opt/proxmox-interfaces/deploy/support-bundle.sh
 ```
@@ -102,6 +103,8 @@ Important:
 - a full setup orchestrator is available with `deploy/setup-platform.sh` (core config + optional monitoring stack hooks).
 - `deploy/setup-platform.sh` now supports `--profile core|full|pro` and `--install-monitoring-stack auto|true|false`.
 - in `--profile full`, Grafana is auto-provisioned with Prometheus datasource and a starter dashboard.
+- at the end of setup-platform, a post-setup validator runs and reports readiness issues per profile.
+- you can run manual validation anytime with `scripts/validate-deployment.sh --profile core|full|pro`.
 - control full setup prompt with `POST_INSTALL_PLATFORM_SETUP=auto|true|false` (default: `auto`).
 
 ## 2) Local development
@@ -182,6 +185,7 @@ Detailed distribution model:
 - `deploy/diagnose.sh`: quick runtime diagnostics
 - `deploy/support-bundle.sh`: support bundle export
 - `scripts/install-monitoring-stack.sh`: local Prometheus + Grafana stack installer (profile `full`)
+- `scripts/validate-deployment.sh`: profile-aware deployment validator (core/full/pro)
 - `deploy/publish-github-release.ps1`: release creation helper
 - `deploy/upload-release-assets.ps1`: release assets uploader
 

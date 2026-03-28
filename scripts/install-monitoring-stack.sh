@@ -71,6 +71,12 @@ mkdir -p \
   "$GRAFANA_DIR/provisioning/dashboards" \
   "$GRAFANA_DIR/dashboards"
 
+cat > "$STACK_DIR/.env" <<EOF
+GRAFANA_ADMIN_USER=${GRAFANA_ADMIN_USER}
+GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+EOF
+chmod 600 "$STACK_DIR/.env"
+
 cat > "$PROM_DIR/prometheus.yml" <<EOF
 global:
   scrape_interval: 30s
@@ -219,7 +225,7 @@ cat > "$GRAFANA_DIR/dashboards/proxmox-interfaces-overview.json" <<'EOF'
 EOF
 
 cd "$STACK_DIR"
-docker compose up -d
+docker compose --env-file "$STACK_DIR/.env" up -d
 
 for i in $(seq 1 30); do
   if curl -fsS http://127.0.0.1:9090/-/ready >/dev/null 2>&1; then

@@ -8,6 +8,7 @@ CONFIG_WIZARD="$APP_DIR/deploy/configure-instance.sh"
 SMARTCTL_INSTALLER="$APP_DIR/scripts/install-smartctl-exporter.sh"
 PROM_SETUP_SCRIPT="$APP_DIR/scripts/configure-prometheus-smartctl.sh"
 LOCAL_MONITORING_INSTALLER="$APP_DIR/scripts/install-monitoring-stack.sh"
+DEPLOYMENT_VALIDATOR="$APP_DIR/scripts/validate-deployment.sh"
 ENV_FILE="$APP_DIR/.env"
 
 MODE="${MODE:-auto}"
@@ -262,6 +263,15 @@ if [[ "$CONFIGURE_PROMETHEUS" == "1" ]]; then
       log_warn "Prometheus scrape configuration failed (continuing)."
     fi
   fi
+fi
+
+if [[ -x "$DEPLOYMENT_VALIDATOR" ]]; then
+  log_info "Running post-setup validation..."
+  if ! bash "$DEPLOYMENT_VALIDATOR" --profile "$PLATFORM_PROFILE"; then
+    log_warn "Post-setup validation reported issues (see output above)."
+  fi
+else
+  log_warn "Deployment validator not found: $DEPLOYMENT_VALIDATOR"
 fi
 
 log_ok "Platform setup completed."
